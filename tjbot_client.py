@@ -9,6 +9,10 @@ from paho.mqtt import client as mqtt_client
 import psutil  
 from paho.mqtt.subscribeoptions import SubscribeOptions
 
+# 📦 IMPORT CÁC TÍNH NĂNG PHẦN CỨNG TỪ THƯ MỤC FEATURES
+from features import led_feature
+from features import arm_feature
+
 # --- TẢI CẤU HÌNH TỪ FILE .ENV ---
 load_dotenv()
 
@@ -22,109 +26,69 @@ TOPIC_PUB = os.getenv('MQTT_TOPIC_PUB', 'tjbot1/status').strip()
 CLIENT_ID = os.getenv('MQTT_CLIENT_ID', 'raspberry-pi-tjbot1').strip()
 
 # =====================================================================
-# 1. CÁC HÀM TRÍCH XUẤT THÔNG TIN HỆ THỐNG & MẠNG
+# KHỞI TẠO BẢNG ÁNH XẠ ACTIONS_MAP RỖNG VÀ ĐĂNG KÝ TÍNH NĂNG ĐỘNG
+# =====================================================================
+ACTIONS_MAP = {}
+
+# Gọi hàm register của từng tính năng để tự điền thông tin chi tiết vào bảng map chung
+led_feature.register(ACTIONS_MAP)
+arm_feature.register(ACTIONS_MAP)
+
+# =====================================================================
+# CÁC HÀM TRÍCH XUẤT THÔNG TIN HỆ THỐNG & MẠNG (Giữ nguyên)
 # =====================================================================
 def get_all_interfaces_report():
-    """ Quét toàn bộ hệ thống để lấy IP và MAC của từng card mạng cụ thể """
     interfaces = psutil.net_if_addrs()
-    
-    card_names_map = {
-        'wlan0': 'WiFi (Không dây)',
-        'eth0': 'Ethernet (Mạng dây)',
-        'usb0': 'USB OTG (Cáp Type-C)'
-    }
-    
+    card_names_map = {'wlan0': 'WiFi (Không dây)', 'eth0': 'Ethernet (Mạng dây)', 'usb0': 'USB OTG (Cáp Type-C)'}
     report_lines = []
-    
-    # Định nghĩa hằng số lớp liên kết phần cứng trên Linux (MAC Address)
-    # Thường tương đương với socket.AF_PACKET (giá trị 17)
     AF_PACKET_LINUX = getattr(socket, 'AF_PACKET', 17)
-    
     for target_card in ['wlan0', 'eth0', 'usb0']:
         if target_card in interfaces:
             card_friendly_name = card_names_map.get(target_card, target_card)
-            mac_addr = "UNKNOWN MAC"
-            ip_addr = "Chưa kết nối (No IP)"
-            
+            mac_addr, ip_addr = "UNKNOWN MAC", "Chưa kết nối (No IP)"
             for addr in interfaces[target_card]:
-                # Đọc địa chỉ MAC phần cứng trên Linux
-                if addr.family == AF_PACKET_LINUX:
-                    mac_addr = addr.address.upper()
-                # Đọc địa chỉ IPv4
-                elif addr.family == socket.AF_INET:
-                    ip_addr = addr.address
-            
+                if addr.family == AF_PACKET_LINUX: mac_addr = addr.address.upper()
+                elif addr.family == socket.AF_INET: ip_addr = addr.address
             report_lines.append(f"   + {card_friendly_name}:\n     * MAC: {mac_addr}\n     * IP: {ip_addr}")
-            
     return "\n".join(report_lines)
 
 def get_wifi_ssid():
-    """Lấy tên mạng WiFi (SSID) đang kết nối trên Raspberry Pi"""
     try:
         ssid = subprocess.check_output(["iwgetid", "-r"]).decode("utf-8").strip()
         return ssid if ssid else "Not Connected to WiFi"
-    except:
-        return "N/A (Có thể dùng mạng dây/OTG)"
+    except: return "N/A"
 
 def get_public_ip():
-    """Lấy địa chỉ IP Public công cộng thông qua dịch vụ ipify"""
-    try:
-        return urllib.request.urlopen('https://api.ipify.org', timeout=3).read().decode('utf8')
-    except:
-        return "Không lấy được IP Public (Mất internet)"
+    try: return urllib.request.urlopen('https://api.ipify.org', timeout=3).read().decode('utf8')
+    except: return "Không lấy được IP Public"
 
 def send_startup_report(client):
-    """Gửi báo cáo tổng quan mọi card mạng khi vừa khởi động"""
     network_details = get_all_interfaces_report()
     ssid = get_wifi_ssid()
     public_ip = get_public_ip()
-    
     report_msg = (
-        f"== [TJBOT STARTUP REPORT] ==\n"
-        f" - Trạng thái: Startup\n"
-        f" - Chi tiết danh sách Card mạng:\n"
-        f"{network_details}\n"
-        f" - Tên WiFi đang kết nối (SSID): {ssid}\n"
-        f" - Địa chỉ IP Public (Internet): {public_ip}\n"
-        f"============================="
+        f"== [TJBOT STARTUP REPORT] ==\n - Trạng thái: Startup\n"
+        f" - Chi tiết danh sách Card mạng:\n{network_details}\n"
+        f" - Tên WiFi (SSID): {ssid}\n - Địa chỉ IP Public: {public_ip}\n============================="
     )
     print(report_msg)
     client.publish(TOPIC_PUB, report_msg, retain=True)
 
 # =====================================================================
-# 2. ĐỊNH NGHĨA CÁC HÀM ROBOT VÀ BẢNG ÁNH XẠ ACTIONS_MAP
-# =====================================================================
-def led_control(state, color="white"):
-    print(f"-> [EXEC] led_control: State={state}, Color={color}")
-    return f"LED changed to {state} ({color})"
-
-def wave_hand(speed, times=1):
-    print(f"-> [EXEC] wave_hand: Speed={speed}, Times={times}")
-    return f"Hand waved {times} times at {speed}"
-
-ACTIONS_MAP = {
-    "led_control": led_control,
-    "wave_hand": wave_hand
-}
-
-# =====================================================================
-# 3. KẾT NỐI VÀ XỬ LÝ LỆNH MQTT
+# KẾT NỐI VÀ XỬ LÝ LỆNH MQTT
 # =====================================================================
 def connect_mqtt():
     def on_connect(client, userdata, flags, rc, properties=None):
         if rc == 0:
             print("Connected to MQTT Broker!")
-            # 🔥 ĐÃ FIX: Truyền chính xác thuộc tính options vào hàm subscribe để kích hoạt noLocal
             options = SubscribeOptions(noLocal=True)
             client.subscribe(TOPIC_SUB, options=options)
-            
             send_startup_report(client)
         else:
             print(f"Failed to connect, return code {rc}\n")
 
     client = mqtt_client.Client(client_id=CLIENT_ID, callback_api_version=mqtt_client.CallbackAPIVersion.VERSION2)
-    if USER and PASSWORD:
-        client.username_pw_set(USER, PASSWORD)
+    if USER and PASSWORD: client.username_pw_set(USER, PASSWORD)
     client.on_connect = on_connect
     client.connect(BROKER, PORT)
     return client
@@ -132,34 +96,36 @@ def connect_mqtt():
 def on_message(client, userdata, msg):
     payload = msg.payload.decode().strip()
     
-    # 🚨 BỘ LỌC CHẶN LẶP PHÒNG THỦ: Tránh xử lý mã phản hồi
     if payload in ["OK", "ERR"] or payload.startswith("SUCCESS:") or payload.startswith("ERROR:"):
         return
 
     print(f"\n[MQTT] Nhận lệnh từ kênh [{msg.topic}]: {payload}")
     
-    # =====================================================================
-    # 1. XỬ LÝ CÁC LỆNH ĐẶC BIỆT (HELP / INFO)
-    # =====================================================================
+    # -----------------------------------------------------------------
+    # XỬ LÝ LỆNH HELP NÂNG CẤP (In chi tiết hướng dẫn sử dụng)
+    # -----------------------------------------------------------------
     if payload.lower() == "help":
-        valid_functions = ", ".join([f"{func}()" for func in ACTIONS_MAP.keys()])
-        help_msg = f"== [TJBOT COMMANDS HELP] ==\n Danh sách lệnh hợp lệ: [{valid_functions}]\n==========================="
-        print("-> Thực thi lệnh: help")
-        client.publish(TOPIC_PUB, help_msg)    
-        client.publish(TOPIC_SUB, "OK")         
+        help_lines = ["== [TJBOT COMMANDS DOCUMENTATION] =="]
+        for func_name, info in ACTIONS_MAP.items():
+            help_lines.append(f" 🔹 Hàm: {func_name}({info['params']})")
+            help_lines.append(f"    👉 Ví dụ mẫu: {info['example']}")
+            help_lines.append("-" * 35)
+        help_lines.append("====================================")
+        
+        help_msg = "\n".join(help_lines)
+        client.publish(TOPIC_PUB, help_msg)    # Trả tài liệu hướng dẫn về kênh status
+        client.publish(TOPIC_SUB, "OK")         # Xác nhận ngắn gọn về kênh command
         return
 
     if payload.lower() == "info":
-        print("-> Thực thi lệnh: info (Gửi lại Startup Report)")
         send_startup_report(client)             
         client.publish(TOPIC_SUB, "OK")         
         return
 
-    # =====================================================================
-    # 2. PHÂN TÍCH VÀ XỬ LÝ CÁC HÀM PHẦN CỨNG (RPC)
-    # =====================================================================
+    # -----------------------------------------------------------------
+    # PHÂN TÍCH LỆNH PHẦN CỨNG
+    # -----------------------------------------------------------------
     match = re.match(r"^(\w+)\((.*)\)$", payload)
-    
     if not match or match.group(1) not in ACTIONS_MAP:
         print(f"-> [LỖI]: Sai cú pháp hoặc hàm không tồn tại: {payload}")
         client.publish(TOPIC_SUB, "ERR") 
@@ -170,14 +136,14 @@ def on_message(client, userdata, msg):
     params = [p.strip() for p in raw_params.split(",")] if raw_params else []
 
     try:
-        target_function = ACTIONS_MAP[func_name]
+        # 🔥 ĐÃ FIX: Lấy hàm thực thi nằm trong sub-key 'func'
+        target_function = ACTIONS_MAP[func_name]["func"]
         result = target_function(*params)
         
         client.publish(TOPIC_PUB, f"SUCCESS: {result}")
         client.publish(TOPIC_SUB, "OK")
-        
     except TypeError as e:
-        print(f"-> [LỖI TẠM THỜI]: Sai số lượng tham số cho hàm '{func_name}': {e}")
+        print(f"-> [LỖI THAM SỐ]: {e}")
         client.publish(TOPIC_SUB, "ERR") 
     except Exception as e:
         print(f"-> [LỖI HỆ THỐNG]: {e}")
