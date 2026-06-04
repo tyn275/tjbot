@@ -1,0 +1,14 @@
+[Unit]
+Description=Tiến trình điều khiển TJBot qua MQTT
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/tjbot_mqtt
+ExecStart=/home/pi/tjbot_mqtt/venv/bin/python3 /home/pi/tjbot_mqtt/tjbot_client.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
