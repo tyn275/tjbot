@@ -140,7 +140,7 @@ def on_message(client, userdata, msg):
         target_function = ACTIONS_MAP[func_name]["func"]
         result = target_function(*params)
         
-        client.publish(TOPIC_PUB, f"SUCCESS: {result}")
+        client.publish(TOPIC_PUB, f"{result}")
         client.publish(TOPIC_SUB, "OK")
     except TypeError as e:
         print(f"-> [LỖI THAM SỐ]: {e}")

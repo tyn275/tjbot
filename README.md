@@ -88,3 +88,18 @@ sudo systemctl status tjbot.service
 # Xem chi tiết báo lỗi
 sudo journalctl -u tjbot.service -n 50 --no-pager
 ```
+
+## Sefttest
+
+Kiểm tra các chức năng hoạt động. Phải chạy với sudo để còn giành quyển điều khiển led ACT, audio
+
+```shell
+source venv/bin/activate
+python3 selftest.py
+```
+
+hoặc
+
+```shell
+sudo ./venv/bin/python ./selftest.py
+```
