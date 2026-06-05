@@ -29,6 +29,12 @@
 6. Khởi động lại **Rasberry Pi** với thẻ và mở cổng COM ở tốc độ **115200**. Đợi khoảng 10 giây thì sẽ thấy kết quả như sau
     ![alt text](images/Pi4-uart.png)
 
+## Lắp ngoại vi
+
+### Cánh tay servo
+
+![alt text](images/Pi4-servo.png)
+
 ## Cấu hình MQTT trên Raspberry Pi để điều khiển Robot
 
 ### Bước 1: Tạo môi trường ảo (VENV) và cài thư viện MQTT
