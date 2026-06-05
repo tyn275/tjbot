@@ -87,7 +87,7 @@ def selftest():
         
         start_angle = 90
         end_angle = -90
-        steps = 50      # Chia nhỏ hành trình thành nhiều bước để chuyển động mượt
+        steps = 30      # Chia nhỏ hành trình thành nhiều bước để chuyển động mượt
         delay_per_step = 0.02 # Khoảng 0.05 giây mỗi bước nhỏ
         angle_per_step = (end_angle - start_angle) / steps
         

@@ -49,8 +49,8 @@ python -m venv venv
 # 3. Kích hoạt môi trường ảo
 source venv/bin/activate
 
-# 4. Cài đặt thư viện MQTT (paho-mqtt)
-pip install paho-mqtt
+# 4. Cài đặt thư viện python
+pip install -r requirements 
 ```
 
 ### Bước 2: Viết mã nguồn Python xử lý MQTT (tjbot_client.py)
