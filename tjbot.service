@@ -3,12 +3,22 @@ Description=Tiến trình điều khiển TJBot qua MQTT
 After=network.target
 
 [Service]
-Type=simple
-User=pi
+# Khai báo chạy service với đặc quyền cao nhất (Thay vì User=pi)
+User=root
+Group=root
+
+# Đặt thư mục làm việc chính của dự án
 WorkingDirectory=/home/pi/tjbot_mqtt
-ExecStart=/home/pi/tjbot_mqtt/venv/bin/python3 /home/pi/tjbot_mqtt/tjbot_client.py
+
+# Gọi trực tiếp trình biên dịch Python bên trong môi trường ảo venv dưới quyền root
+ExecStart=/home/pi/tjbot_mqtt/venv/bin/python /home/pi/tjbot_mqtt/tjbot_client.py
+
+# Cấu hình tự động khởi động lại nếu script bị sập nguồn đột ngột
 Restart=always
 RestartSec=5
+
+# Gom toàn bộ log in ra từ lệnh print() hiển thị ngay lập tức trong hệ thống
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target
