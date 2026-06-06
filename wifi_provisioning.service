@@ -1,0 +1,26 @@
+[Unit]
+Description=Dịch vụ Cấu hình mạng Bluetooth UART khép kín cho TJBot
+After=bluetooth.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/pi/tjbot_conn
+
+# --- KHỐI LỆNH 1: Ép hạ tầng Bluetooth mở hoàn toàn ---
+ExecStartPre=/bin/bash -c "rfkill unblock bluetooth && systemctl restart bluetooth && sleep 2"
+ExecStartPre=/usr/bin/bluetoothctl -- power on
+ExecStartPre=/usr/bin/bluetoothctl -- pairable on
+ExecStartPre=/usr/bin/bluetoothctl -- discoverable on
+
+# Tự động đồng ý và mở chế độ đón nhận mọi yêu cầu kết nối từ thiết bị ngoài
+ExecStartPre=/bin/bash -c "/usr/bin/bt-agent -c NoInputNoOutput & sleep 1"
+
+# --- KHỐI LỆNH 2: Khởi chạy file Python quản lý ---
+ExecStart=/home/pi/tjbot_conn/venv/bin/python3 wifi_provisioning.py
+
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

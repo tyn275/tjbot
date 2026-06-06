@@ -17,6 +17,7 @@
     - [💾 addwifissid, matkhauday - lưu trữ](#-addwifissid-matkhauday---lưu-trữ)
     - [📋 listwifi - liệt kê](#-listwifi---liệt-kê)
     - [🗑️ delwifissid - xóa](#-delwifissid---xóa)
+    - [Chạy dịch vụ](#chạy-dịch-vụ)
 - [Sefttest](#sefttest)
 
 <!-- /TOC -->
@@ -141,6 +142,45 @@ Nguyên lý hoạt động: Ta cấu hình chip Bluetooth trên Pi chạy ở ch
 
 Cách phần mềm xử lý: Tiến trình Python chỉ cần đọc/ghi vào file **/dev/rfcomm0** này y hệt như đang đọc/ghi một cổng Serial vật lý (UART) thông thường thông qua thư viện **pyserial**.
 
+- Bỏ lệnh cấm của hệ thống đối với chip Bluetooth:
+
+    ```shell
+    sudo rfkill unblock bluetooth
+    ```
+
+- Khởi động lại dịch vụ Bluetooth của hệ điều hành
+
+    ```shell
+    sudo systemctl restart bluetooth
+    ```
+
+- Mở giao diện cli điều khiển bluetooth
+
+    ```shell
+    sudo bluetoothctl
+    ```
+
+- Kích hoạt các tính năng của mạng bluetooth
+
+    ```shell
+    power on
+    discoverable on
+    pairable on
+    agent NoInputNoOutput
+    default-agent
+    ```
+
+    _Câu lệnh agent NoInputNoOutput sẽ cấu hình cho Pi hiểu rằng: "Đây là thiết bị không có màn hình/bàn phím để nhập mã PIN, hãy tự động đồng ý ghép đôi với mọi thiết bị an toàn yêu cầu kết nối"._
+_
+- Thoát khỏi giao diện cấu hình bluetooth
+
+    ```shell
+    exit
+    ```
+
+- Cho phép quét thấy và Kích hoạt cấu hình SPP (Serial Port Profile)
+
+
 ### 🔍 wifiscan() - tìm mạng wifi
 
 - Cách Pi xử lý: Python sẽ gọi lệnh hệ thống `sudo iwlist wlan0 scan` hoặc sử dụng bộ công cụ `nmcli` (NetworkManager) qua câu lệnh: `nmcli -t -f SSID,SIGNAL device wifi list`.
@@ -177,6 +217,19 @@ Cách phần mềm xử lý: Tiến trình Python chỉ cần đọc/ghi vào fi
     ```
 
 - Kết quả trả về: Trả về DELETED_SUCCESS để trang web cập nhật lại giao diện (gỡ Wi-Fi đó ra khỏi danh sách đã lưu).
+
+### Chạy dịch vụ
+
+```shell
+# 1. Ép Systemd đọc lại toàn bộ các file service vừa sửa đổi
+sudo systemctl daemon-reload
+
+# 2. Cho phép dịch vụ tự động chạy khi khởi động nguồn Raspberry Pi
+sudo systemctl enable wifi_provisioning.service
+
+# 3. Ra lệnh Khởi chạy dịch vụ ngay lập tức
+sudo systemctl restart wifi_provisioning.service
+```
 
 ## Sefttest
 
