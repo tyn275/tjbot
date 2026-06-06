@@ -1,5 +1,20 @@
 # TJBOT DEV DOCUMENT
 
+<!-- TOC -->
+
+- [OS và khởi động](#os-và-khởi-động)
+- [Lắp ngoại vi](#lắp-ngoại-vi)
+    - [Cánh tay servo](#cánh-tay-servo)
+    - [Led trên đầu](#led-trên-đầu)
+- [Cấu hình MQTT trên Raspberry Pi để điều khiển Robot](#cấu-hình-mqtt-trên-raspberry-pi-để-điều-khiển-robot)
+    - [Bước 1: Tạo môi trường ảo VENV và cài thư viện MQTT](#bước-1-tạo-môi-trường-ảo-venv-và-cài-thư-viện-mqtt)
+    - [Bước 2: Viết mã nguồn Python xử lý MQTT tjbot_client.py](#bước-2-viết-mã-nguồn-python-xử-lý-mqtt-tjbot_clientpy)
+    - [Bước 3: Biến file code thành "Tiến trình chạy ngầm" Systemd Service](#bước-3-biến-file-code-thành-tiến-trình-chạy-ngầm-systemd-service)
+    - [Bước 4: Kích hoạt service và kiểm tra tiến trình](#bước-4-kích-hoạt-service-và-kiểm-tra-tiến-trình)
+- [Sefttest](#sefttest)
+
+<!-- /TOC -->
+
 ## OS và khởi động
 
 1. Tải về công cụ cài đặt OS:
@@ -34,6 +49,12 @@
 ### Cánh tay servo
 
 ![alt text](images/Pi4-servo.png)
+
+### Led trên đầu
+
+Led RGB 10mm Cathod chung
+
+![alt text](images/Pi4-leds.png)
 
 ## Cấu hình MQTT trên Raspberry Pi để điều khiển Robot
 
