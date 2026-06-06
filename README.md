@@ -11,6 +11,12 @@
     - [Bước 2: Viết mã nguồn Python xử lý MQTT tjbot_client.py](#bước-2-viết-mã-nguồn-python-xử-lý-mqtt-tjbot_clientpy)
     - [Bước 3: Biến file code thành "Tiến trình chạy ngầm" Systemd Service](#bước-3-biến-file-code-thành-tiến-trình-chạy-ngầm-systemd-service)
     - [Bước 4: Kích hoạt service và kiểm tra tiến trình](#bước-4-kích-hoạt-service-và-kiểm-tra-tiến-trình)
+- [Nâng cấp: Giám sát mạng WiFi và đăng kí mới](#nâng-cấp-giám-sát-mạng-wifi-và-đăng-kí-mới)
+    - [Giải pháp cấu hình Bluetooth thành Serial UART RFCOMM](#giải-pháp-cấu-hình-bluetooth-thành-serial-uart-rfcomm)
+    - [🔍 wifiscan - tìm mạng wifi](#-wifiscan---tìm-mạng-wifi)
+    - [💾 addwifissid, matkhauday - lưu trữ](#-addwifissid-matkhauday---lưu-trữ)
+    - [📋 listwifi - liệt kê](#-listwifi---liệt-kê)
+    - [🗑️ delwifissid - xóa](#-delwifissid---xóa)
 - [Sefttest](#sefttest)
 
 <!-- /TOC -->
@@ -76,13 +82,15 @@ pip install -r requirements
 
 ### Bước 2: Viết mã nguồn Python xử lý MQTT (tjbot_client.py)
 
-Soạn file [**/home/pi/tjbot_mqtt/tjbot_client.py**](./tjbot_client.py) với nội dung như đính kèm.
+Chức năng chính: Soạn file [**/home/pi/tjbot_mqtt/tjbot_client.py**](./tjbot_client.py) với nội dung như đính kèm.\
+Chưc năng giám sát wifi: Soạn file [**/home/pi/tjbot_conn/wifi_monitor.py**](./wifi_monitor.py) với nội dung như đính kèm.
 
 ### Bước 3: Biến file code thành "Tiến trình chạy ngầm" (Systemd Service)
 
 Để code này tự chạy ngay khi bật nguồn Pi mà bạn không cần phải mở PuTTY lên gõ lệnh, hãy tạo một file Service cho hệ thống quản lý
 
-[**/etc/systemd/system/tjbot.service**](./tjbot.service)
+Service chính: [**/etc/systemd/system/tjbot.service**](./tjbot.service)\
+Service giám sát wifi: [**/etc/systemd/system/wifi-monitor.service**](./wifi-monitor.service)
 
 ### Bước 4: Kích hoạt service và kiểm tra tiến trình
 
@@ -102,6 +110,8 @@ sudo systemctl start tjbot.service
 sudo systemctl status tjbot.service
 ```
 
+Làm tương tự vởi servie giám sát wifi.
+
 Nếu service đã chạy và cần cập nhật [Code](#bước-2-viết-mã-nguồn-python-xử-lý-mqtt-tjbot_clientpy) thì cần chạy lại service như sau
 
 ```shell
@@ -115,6 +125,58 @@ sudo systemctl status tjbot.service
 # Xem chi tiết báo lỗi
 sudo journalctl -u tjbot.service -n 50 --no-pager
 ```
+
+## Nâng cấp: Giám sát mạng WiFi và đăng kí mới
+
+Việc giám sát mạng WiFi được thực hiện qua file chức năng [wifi_monitor.py](./wifi_monitor.py), được biến thành service thường trú bởi đăng kí [wifi-monitor.service](./wifi-monitor.service)
+
+**Việc đăng kí mới ** được thực hiện qua bluetooth:
+> biến Raspberry Pi thành một thiết bị Bluetooth Classic (chế độ SPP - Serial Port Profile) để giả lập cổng Serial ảo (Virtual UART) là phương án tối ưu. Người dùng chỉ cần bật điện thoại/máy tính, kết nối Bluetooth, truy cập vào một trang web hỗ trợ WebSerial/WebBluetooth (hoặc ứng dụng Serial Terminal) là có thể gõ lệnh tương tác được ngay.
+
+### Giải pháp cấu hình Bluetooth thành Serial UART (RFCOMM)
+
+Để Raspberry Pi có thể phát ra Bluetooth và tự động mở một cổng Serial ảo chờ trang web kết nối, sử dụng công cụ **RFCOMM** của giao thức **Bluetooth Linux** (bluez).
+
+Nguyên lý hoạt động: Ta cấu hình chip Bluetooth trên Pi chạy ở chế độ **SPP** (Serial Port Profile). Khi có một thiết bị (điện thoại/máy tính) kết nối vào, Linux sẽ tự động ánh xạ luồng dữ liệu Bluetooth đó thành một file cổng ảo trong hệ thống tại đường dẫn /dev/rfcomm0.
+
+Cách phần mềm xử lý: Tiến trình Python chỉ cần đọc/ghi vào file **/dev/rfcomm0** này y hệt như đang đọc/ghi một cổng Serial vật lý (UART) thông thường thông qua thư viện **pyserial**.
+
+### 🔍 wifiscan() - tìm mạng wifi
+
+- Cách Pi xử lý: Python sẽ gọi lệnh hệ thống `sudo iwlist wlan0 scan` hoặc sử dụng bộ công cụ `nmcli` (NetworkManager) qua câu lệnh: `nmcli -t -f SSID,SIGNAL device wifi list`.
+- Kết quả trả về: Lệnh này chạy rất nhanh 1~2 giây. Python sẽ lọc ra danh sách tên Wi-Fi (SSID) và độ mạnh tín hiệu (RSSI), sau đó định dạng thành chuỗi (hoặc mảng JSON) để đẩy ngược lại qua cổng Serial cho trang web hiển thị thành một danh sách cho người dùng chọn.
+
+### 💾 addwifi(ssid, matkhauday) - lưu trữ
+
+- Cách Pi xử lý: Không trực tiếp sửa file `/etc/wpa_supplicant/wpa_supplicant.conf` mà gián tiếp thông qua lệnh hệ thống của NetworkManager:
+
+  ```shell
+  nmcli device wifi connect "TÊN_WIFI" password "MẬT_KHẨU"
+  ```
+
+- Kết quả trả về: Lệnh này vừa lưu cấu hình, vừa ép Pi thử kết nối ngay lập tức. Nếu thành công, Pi trả về **CONNECTED_SUCCESS**, nếu sai mật khẩu sẽ trả về **AUTH_FAILED**.
+
+### 📋 listwifi() - liệt kê
+
+- Cách Pi xử lý: Để xem các mạng Wi-Fi đã được lưu trong bo mạch, Python sẽ chạy lệnh:
+
+    ```shell
+    nmcli -t -f NAME,UUID connection show --active=no
+    ```
+
+    _(Để lấy cả mật khẩu đã lưu phục vụ việc hiển thị lên trang web, Pi có thể truy cập vào thư mục cấu hình hệ thống /etc/NetworkManager/system-connections/ để đọc khóa psk)._
+
+- Kết quả trả về: Trả về danh sách các mạng kèm mật khẩu dạng text để trang web đồng bộ.
+
+### 🗑️ delwifi(ssid) - xóa
+
+- Cách Pi xử lý: Python sẽ ra lệnh cho hệ thống xóa bỏ profile cấu hình của mạng Wi-Fi đó để Pi không bao giờ tự động kết nối lại nữa:
+
+    ```shell
+    nmcli connection delete "TÊN_WIFI"
+    ```
+
+- Kết quả trả về: Trả về DELETED_SUCCESS để trang web cập nhật lại giao diện (gỡ Wi-Fi đó ra khỏi danh sách đã lưu).
 
 ## Sefttest
 

@@ -1,0 +1,19 @@
+[Unit]
+Description=Tiến trình giám sát Wifi và cứu hộ SOS đèn ACT
+After=network.target
+
+[Service]
+Type=simple
+# Chỉ định chính xác thư mục dự án của bạn để Python nhận diện được module 'features'
+WorkingDirectory=/home/pi/tjbot_conn
+# Thay thế /home/pi/tjbot/wifi_monitor.py bằng đường dẫn thực tế trên Pi của bạn
+ExecStart=/usr/bin/python3 /home/pi/tjbot_conn/wifi_monitor.py
+# Tự động khởi động lại dịch vụ nếu file Python bị lỗi/bị tắt đột ngột
+Restart=on-failure
+# Chờ 5 giây trước khi khởi động lại
+RestartSec=5
+# hàm led_sos cần quyền ghi vào file hệ thống /sys/class/leds/ACT/brightness
+User=root
+
+[Install]
+WantedBy=multi-user.target

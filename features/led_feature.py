@@ -139,6 +139,38 @@ def led_blink_custom(times=3, speed="fast"):
     except ValueError:
         return "ERROR: Tham số 'times' phải là một số nguyên!"
 
+def led_sos():
+    """BỔ SUNG MỚI: Phát tín hiệu SOS qua đèn ACT (Onboard LED) theo mã Morse"""
+    print("-> [TÍNH NĂNG LED] led_sos: Đang phát tín hiệu cứu hộ SOS...")
+    
+    # Chuẩn thời gian Morse cơ bản: 
+    SHORT_GAP = 0.15  # Thời gian chớp ngắn (dấu chấm)
+    LONG_GAP = 0.45   # Thời gian chớp dài (dấu gạch)
+    ELEMENT_GAP = 0.15 # Khoảng cách nghỉ giữa các lần chớp trong 1 ký tự
+    LETTER_GAP = 0.4  # Khoảng cách nghỉ giữa các chữ cái (S - O - S)
+
+    try:
+        # 1. Chữ 'S' (3 chớp ngắn)
+        for _ in range(3):
+            _write_led(1); time.sleep(SHORT_GAP)
+            _write_led(0); time.sleep(ELEMENT_GAP)
+        time.sleep(LETTER_GAP)
+
+        # 2. Chữ 'O' (3 chớp dài)
+        for _ in range(3):
+            _write_led(1); time.sleep(LONG_GAP)
+            _write_led(0); time.sleep(ELEMENT_GAP)
+        time.sleep(LETTER_GAP)
+
+        # 3. Chữ 'S' (3 chớp ngắn)
+        for _ in range(3):
+            _write_led(1); time.sleep(SHORT_GAP)
+            _write_led(0); time.sleep(ELEMENT_GAP)
+            
+        return "SUCCESS: Đã hoàn thành 1 chu kỳ phát tín hiệu SOS trên đèn ACT."
+    except Exception as e:
+        return f"ERROR: Không thể phát tín hiệu SOS: {e}"
+    
 # -----------------------------------------------------------------
 # CÁC HÀM XỬ LÝ LOGIC LED BỔ SUNG MỚI (ĐẦU TJBOT - HỖ TRỢ PWM & HEX)
 # -----------------------------------------------------------------
@@ -248,7 +280,7 @@ def selftest():
         except Exception as e:
             print(f"❌ THẤT BẠI: Xảy ra xung đột trong quá trình phát xung: {e}")
             rgb_ok = False
-
+            
     print("\n--- [KẾT QUẢ TỔNG HỢP SELFTEST MÔ-ĐUN ĐÈN ĐIỀU KHIỂN] ---")
     if onboard_ok and rgb_ok:
         print("=> TOÀN BỘ MÔ-ĐUN LED TRÊN ROBOT HOẠT ĐỘNG HOÀN HẢO! ✅")
