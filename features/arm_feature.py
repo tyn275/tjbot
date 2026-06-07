@@ -112,6 +112,6 @@ def selftest():
 
 # Đăng ký hàm với hệ thống MQTT
 def register(actions_map):
-    actions_map["wave_hand"] = {"func": wave_hand, "params": "speed='fast', times=3", "example": "wave_hand(slow, 5)"}
-    actions_map["set_arm"] = {"func": set_arm_angle, "params": "angle=0", "example": "set_arm(45)"}
+    actions_map["Wavehand"] = {"func": wave_hand, "params": "speed=fast|low, times=3", "example": "wave_hand(slow, 5)"}
+    actions_map["Arm"] = {"func": set_arm_angle, "params": "angle=0", "example": "set_arm(45)"}
     print("-> [HỆ THỐNG] Đã đăng ký tính năng: Cánh tay Servo")

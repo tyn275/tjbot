@@ -32,7 +32,7 @@ COLOR_MAP = {
     "cyan":    "#00ffff",
     "magenta": "#ff00ff",
     "purple":  "#800080",
-    "off":     "#000000"
+    "black":   "#000000"
 }
 
 # -----------------------------------------------------------------
@@ -177,16 +177,20 @@ def led_sos():
 
 def head_led_control(state, color="white"):
     """Điều khiển bật/tắt và pha trộn màu LED bằng PWM theo tên màu hoặc mã #rrggbb trực tiếp"""
-    color_key = color.lower().strip()
+    color_key = color.lower().strip().strip("'\"").strip("'\'")
     print(f"-> [TÍNH NĂNG LED HEAD PWM] head_led_control: State={state}, Color={color_key}")
     
+    state_str = str(state).lower().strip().strip("'\"").strip("'\'")
+    
+    print(f"{state_str}")
     # 1. XỬ LÝ LỆNH TẮT ĐÈN HEAD
-    if state.lower() in ["off", "0", "false"]:
+    if state_str.lower() in ["off", "0", "false"]:
+        print(f"{state_str}")
         if _write_head_rgb_pwm(0, 0, 0):
             return "SUCCESS: Head LED is now OFF via PWM"
             
     # 2. XỬ LÝ LỆNH BẬT ĐÈN HEAD
-    elif state.lower() in ["on", "1", "true"]:
+    elif state_str.lower() in ["on", "1", "true"]:
         # Bước 1: Nếu color truyền vào nằm trong bảng tra cứu COLOR_MAP, lấy mã HEX tương ứng ra
         target_hex = COLOR_MAP.get(color_key, color_key)
         
@@ -273,6 +277,14 @@ def selftest():
                 _write_head_rgb_pwm(brightness, 0, 0)
                 time.sleep(0.02)
             time.sleep(0.3)
+            for brightness in range(0, 101, 4):
+                _write_head_rgb_pwm(0, brightness, 0)
+                time.sleep(0.02)
+            time.sleep(0.3) 
+            for brightness in range(0, 101, 4):
+                _write_head_rgb_pwm(0, 0, brightness)
+                time.sleep(0.02)
+            time.sleep(0.3)                          
             # Tắt hẳn đèn sau khi test xong
             _write_head_rgb_pwm(0, 0, 0)
             print("✅ OK: Bộ điều xung PWM của LED Đầu hoạt động cực kỳ mượt mà.")
@@ -310,12 +322,13 @@ def register(actions_map):
     # Đăng ký các hàm bổ sung mới
     actions_map["Head"] = {
         "func": head_led_control,
-        "params": "state, color='white | #FFFFFF'",
-        "example": "head_led_control('on', '#ff00ff')"
+        "params": "state=0 | 1 | on | off, color=#FFFFFF | white | red | green | blue | yellow | cyan | magenta | purple | black",
+        "example": "head_led_control(on, #ff00ff)"
     }
+        
     actions_map["HeadBlink"] = {
         "func": head_led_blink,
-        "params": "times=3, speed='fast', color='white | #FFFFFF'",
-        "example": "head_led_blink(5, 'slow', 'blue')"
+        "params": "times=3, speed=fast | low, color=#FFFFFF | white | red | green | blue | yellow | cyan | magenta | purple | black",
+        "example": "HeadBlink(5, slow, blue)"
     }
     print("-> [HỆ THỐNG] Đã đồng bộ tài liệu: Gồm LED ACT & LED RGB trên đầu")
