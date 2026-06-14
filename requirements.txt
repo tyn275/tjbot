@@ -5,3 +5,5 @@ gpiozero
 rpi-lgpio
 bleak
 bluezero
+gtts
+pygame

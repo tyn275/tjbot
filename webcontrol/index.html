@@ -23,7 +23,7 @@
             z-index: 10;
         }
 
-/* 💡 CẬP NHẬT: CSS Sidebar hỗ trợ co giãn mượt mà */
+        /* 💡 CẬP NHẬT: CSS Sidebar hỗ trợ co giãn mượt mà */
         .sidebar {
             width: 260px;
             min-height: calc(100vh - 56px);
@@ -36,15 +36,18 @@
             background-size: 100% auto;
             background-position: center bottom;
             background-repeat: no-repeat;
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Hiệu ứng kéo dãn */
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            /* Hiệu ứng kéo dãn */
             overflow-x: hidden;
             white-space: text-nowrap;
         }
 
         /* 💡 THÊM MỚI: Trạng thái Sidebar khi thu nhỏ thành Icon-only */
         .sidebar.collapsed {
-            width: 65px; /* Chỉ đủ chứa Icon */
-            background-image: none; /* Ẩn ảnh nền robot phía dưới để đỡ rối mắt */
+            width: 65px;
+            /* Chỉ đủ chứa Icon */
+            background-image: none;
+            /* Ẩn ảnh nền robot phía dưới để đỡ rối mắt */
         }
 
         .sidebar .nav-link {
@@ -52,18 +55,21 @@
             padding: 16px 20px;
             display: flex;
             align-items: center;
-            gap: 16px; /* Tăng khoảng cách để tách biệt hẳn với icon khi co giãn */
+            gap: 16px;
+            /* Tăng khoảng cách để tách biệt hẳn với icon khi co giãn */
             font-weight: 500;
             border-left: 4px solid transparent;
             transition: all 0.2s ease;
             position: relative;
             z-index: 2;
-            width: 260px; /* Cố định chiều rộng vùng nội dung để chữ không bị rớt dòng khi thu hẹp */
+            width: 260px;
+            /* Cố định chiều rộng vùng nội dung để chữ không bị rớt dòng khi thu hẹp */
         }
 
         .sidebar .nav-link i {
             font-size: 1.1rem;
-            width: 20px; /* Cố định chiều rộng khung icon để căn chỉnh lề dọc luôn thẳng hàng */
+            width: 20px;
+            /* Cố định chiều rộng khung icon để căn chỉnh lề dọc luôn thẳng hàng */
             text-align: center;
             flex-shrink: 0;
         }
@@ -76,7 +82,8 @@
 
         .sidebar.collapsed .nav-link span {
             opacity: 0;
-            pointer-events: none; /* Không cho tương tác với chữ ẩn */
+            pointer-events: none;
+            /* Không cho tương tác với chữ ẩn */
         }
 
         .sidebar .nav-link:hover,
@@ -165,7 +172,7 @@
         <div class="container-fluid">
             <button class="btn btn-outline-light btn-sm me-3" id="btnToggleSidebar" onclick="toggleSidebar()">
                 <i class="fa-solid fa-bars"></i>
-            </button>            
+            </button>
             <a class="navbar-brand fw-bold text-warning" href="#">
                 <i class="fa-solid fa-robot me-2"></i>Trung tâm điều khiển
             </a>
@@ -194,28 +201,27 @@
     </nav>
 
     <div class="d-flex flex-row flex-grow-1" style="overflow: hidden;">
-        <div class="sidebar d-flex flex-column" id="sidebarMenu"
-            <ul class="nav flex-column show" id="menuList">
-                <li class="nav-item">
-                    <a class="nav-link" href="#" onclick="switchSection('intro', this)">
-                        <i class="fa-solid fa-circle-info"></i> <span>Giới thiệu</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link active" id="btn-menu-gym" href="#" onclick="switchSection('gym', this)">
-                        <i class="fa-solid fa-dumbbell"></i> <span>Phòng tập</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#" onclick="switchSection('actions', this)">
-                        <i class="fa-solid fa-bolt"></i> <span>Hành động</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#" onclick="switchSection('wifi', this)">
-                        <i class="fa-solid fa-gear"></i> <span>Cấu hình</span>
-                    </a>
-                </li>
+        <div class="sidebar d-flex flex-column" id="sidebarMenu" <ul class="nav flex-column show" id="menuList">
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="switchSection('intro', this)">
+                    <i class="fa-solid fa-circle-info"></i> <span>Giới thiệu</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" id="btn-menu-gym" href="#" onclick="switchSection('gym', this)">
+                    <i class="fa-solid fa-dumbbell"></i> <span>Phòng tập</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="switchSection('actions', this)">
+                    <i class="fa-solid fa-bolt"></i> <span>Hành động</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" onclick="switchSection('wifi', this)">
+                    <i class="fa-solid fa-gear"></i> <span>Cấu hình</span>
+                </a>
+            </li>
             </ul>
         </div>
 
@@ -231,15 +237,31 @@
                 </div>
 
                 <div id="section-gym" class="content-section">
-                    <div class="row row-cols-1 row-cols-md-2 g-4" id="gymLayoutContainer">
-                        <div class="col" id="col-head-led">
-                            <div class="text-center p-5 text-muted bg-white rounded shadow-sm">
-                                <i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải bảng điều khiển đèn...
+                    <div class="row g-4">
+                        <div class="col-md-6" id="col-head-led">
+                            <i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải bảng điều khiển đèn...
+                        </div>
+
+                        <div class="col-md-6" id="col-arm-servo">
+                            <i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải bảng điều khiển servo...
+                        </div>
+
+                        <div class="col-md-6" id="col-audio-speaker">
+                            <div class="text-center p-4 text-muted bg-white rounded border">
+                                <i class="fa-solid fa-spinner fa-spin me-2"></i> Đang nạp hệ thống âm thanh...
                             </div>
                         </div>
-                        <div class="col" id="col-arm-servo">
-                            <div class="text-center p-5 text-muted bg-white rounded shadow-sm">
-                                <i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải bảng điều khiển cánh tay...
+
+                        <div class="col-md-6" id="col-mic-input">
+                            <div class="card p-4 shadow-sm border border-dashed bg-white h-100 d-flex align-items-center justify-content-center text-muted"
+                                style="min-height: 250px; border-style: dashed !important;">
+                                <div>
+                                    <i
+                                        class="fa-solid fa-microphone-slash fa-2x mb-2 d-block text-center text-black-50"></i>
+                                    <span class="small fw-bold">Khối kết nối Microphone I2S</span>
+                                    <small class="d-block text-center text-muted" style="font-size: 0.7rem;">(Hệ thống
+                                        dự phòng - Phát triển sau)</small>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -277,7 +299,7 @@
 
         window.onload = function () {
             writeLog("🚀 Hệ thống đã sẵn sàng. Đang đồng bộ giao diện...");
-            setTimeout(function() {
+            setTimeout(function () {
                 const gymBtn = document.getElementById('btn-menu-gym');
                 if (gymBtn) {
                     switchSection('gym', gymBtn);
@@ -320,46 +342,64 @@
 
         // --- HÀM NẠP PHÒNG TẬP (CẢI TIẾN CÔ LẬP SCRIPT) ---
         function loadGymBlocks() {
-            // Thêm cờ chặn nạp lại nếu đã tồn tại để tối ưu hiệu năng
-            if (document.getElementById('headLedLoaded')) {
-                console.log("[UI] Các block Gym đã tồn tại, bỏ qua fetch lại.");
-                return;
+            if (!document.getElementById('headLedLoaded')) {
+                fetch('blockheadled.html')
+                    .then(response => response.text())
+                    .then(html => {
+                        const container = document.getElementById('col-head-led');
+                        // Đánh dấu nhận diện bằng một thẻ ẩn để không bị nạp lặp
+                        container.innerHTML = '<div id="headLedLoaded"></div>' + html;
+
+                        // Thực thi script cô lập bằng cơ chế Eval
+                        const scripts = container.querySelectorAll('script');
+                        scripts.forEach(oldScript => {
+                            try {
+                                window.eval(oldScript.text);
+                            } catch (e) { console.error("Lỗi thực thi script Head-Led:", e); }
+                        });
+                    }).catch(err => {
+                        document.getElementById('col-head-led').innerHTML = `<div class="alert alert-danger">Không thể tải file blockheadled.html</div>`;
+                    });
             }
 
-            fetch('blockheadled.html')
-                .then(response => response.text())
-                .then(html => {
-                    const container = document.getElementById('col-head-led');
-                    // Đánh dấu nhận diện bằng một thẻ ẩn để không bị nạp lặp
-                    container.innerHTML = '<div id="headLedLoaded"></div>' + html;
-                    
-                    // Thực thi script cô lập bằng cơ chế Eval
-                    const scripts = container.querySelectorAll('script');
-                    scripts.forEach(oldScript => {
-                        try {
-                            window.eval(oldScript.text);
-                        } catch(e) { console.error("Lỗi thực thi script Head-Led:", e); }
-                    });
-                }).catch(err => {
-                    document.getElementById('col-head-led').innerHTML = `<div class="alert alert-danger">Không thể tải file blockheadled.html</div>`;
-                });
+            {
+                fetch('blockarm.html')
+                    .then(response => response.text())
+                    .then(html => {
+                        const container = document.getElementById('col-arm-servo');
+                        container.innerHTML = html;
 
-            fetch('blockarm.html')
-                .then(response => response.text())
-                .then(html => {
-                    const container = document.getElementById('col-arm-servo');
-                    container.innerHTML = html;
-                    
-                    // Thực thi script cô lập bằng cơ chế Eval
-                    const scripts = container.querySelectorAll('script');
-                    scripts.forEach(oldScript => {
-                        try {
-                            window.eval(oldScript.text);
-                        } catch(e) { console.error("Lỗi thực thi script Arm-Servo:", e); }
+                        // Thực thi script cô lập bằng cơ chế Eval
+                        const scripts = container.querySelectorAll('script');
+                        scripts.forEach(oldScript => {
+                            try {
+                                window.eval(oldScript.text);
+                            } catch (e) { console.error("Lỗi thực thi script Arm-Servo:", e); }
+                        });
+                    }).catch(err => {
+                        document.getElementById('col-arm-servo').innerHTML = `<div class="alert alert-danger">Không thể tải file blockarm.html</div>`;
                     });
-                }).catch(err => {
-                    document.getElementById('col-arm-servo').innerHTML = `<div class="alert alert-danger">Không thể tải file blockarm.html</div>`;
-                });
+            }
+
+            // 3. Nạp tự động block AUDIO vào dòng thứ 2 phân hệ Gym
+            if (!document.getElementById('audioSpeakerLoaded')) {
+                fetch('blockaudio.html')
+                    .then(response => response.text())
+                    .then(html => {
+                        const container = document.getElementById('col-audio-speaker');
+                        // Ghi đè loại bỏ hoàn toàn chữ "Đang nạp..."
+                        container.innerHTML = '<div id="audioSpeakerLoaded"></div>' + html;
+
+                        // Chạy script của block Audio một cách tường minh để nút bấm onclick nhận được hàm
+                        container.querySelectorAll('script').forEach(oldScript => {
+                            const newScript = document.createElement('script');
+                            newScript.text = oldScript.text;
+                            document.body.appendChild(newScript).parentNode.removeChild(newScript);
+                        });
+                    }).catch(err => {
+                        document.getElementById('col-audio-speaker').innerHTML = `<div class="alert alert-danger">Lỗi kết nối file blockaudio.html</div>`;
+                    });
+            }
         }
 
         // --- HÀM NẠP WIFI (CẢI TIẾN CÔ LẬP SCRIPT) ---
@@ -382,14 +422,14 @@
                     scripts.forEach(oldScript => {
                         try {
                             window.eval(oldScript.text);
-                        } catch(e) { console.error("Lỗi thực thi script Wifi:", e); }
+                        } catch (e) { console.error("Lỗi thực thi script Wifi:", e); }
                     });
                 })
                 .catch(err => {
                     document.getElementById('col-wifi-config').innerHTML = `<div class="alert alert-danger">Không thể tải file blockwifi.html</div>`;
                 });
         }
-      
+
         // HÀM DÙNG CHUNG ĐỂ GỬI LỆNH MQTT
         function sendMQTTCommand(payloadString) {
             if (!mqttClient || !mqttClient.isConnected()) {
@@ -485,10 +525,10 @@
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebarMenu');
             const toggleBtn = document.getElementById('btnToggleSidebar');
-            
+
             if (sidebar) {
                 sidebar.classList.toggle('collapsed');
-                
+
                 // Đổi icon trên nút bấm để tăng trải nghiệm người dùng
                 if (sidebar.classList.contains('collapsed')) {
                     toggleBtn.innerHTML = '<i class="fa-solid fa-arrow-right-to-line"></i>';

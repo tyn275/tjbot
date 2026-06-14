@@ -12,6 +12,7 @@ from paho.mqtt.subscribeoptions import SubscribeOptions
 # 📦 IMPORT CÁC TÍNH NĂNG PHẦN CỨNG TỪ THƯ MỤC FEATURES
 from features import led_feature
 from features import arm_feature
+from features import audio_feature
 
 # --- TẢI CẤU HÌNH TỪ FILE .ENV ---
 load_dotenv()
@@ -33,6 +34,7 @@ ACTIONS_MAP = {}
 # Gọi hàm register của từng tính năng để tự điền thông tin chi tiết vào bảng map chung
 led_feature.register(ACTIONS_MAP)
 arm_feature.register(ACTIONS_MAP)
+audio_feature.register(ACTIONS_MAP)
 
 # =====================================================================
 # CÁC HÀM TRÍCH XUẤT THÔNG TIN HỆ THỐNG & MẠNG (Giữ nguyên)
