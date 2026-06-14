@@ -13,9 +13,9 @@ if not os.path.exists(LED_PATH):
     LED_PATH = "/sys/class/leds/ACT/brightness"
 
 # 2. Cấu hình chân GPIO cho LED RGB mới
-RED_PIN = 16
-GREEN_PIN = 20
-BLUE_PIN = 21
+RED_PIN = 12   # Pin 32
+GREEN_PIN = 16 # pin 36
+BLUE_PIN = 21  # pin 40
 
 # Khai báo các đối tượng điều xung PWM toàn cục
 pwm_R = None
@@ -323,7 +323,7 @@ def register(actions_map):
     actions_map["Head"] = {
         "func": head_led_control,
         "params": "state=0 | 1 | on | off, color=#FFFFFF | white | red | green | blue | yellow | cyan | magenta | purple | black",
-        "example": "head_led_control(on, #ff00ff)"
+        "example": "Head(on, #ff00ff)"
     }
         
     actions_map["HeadBlink"] = {

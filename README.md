@@ -38,13 +38,36 @@
 4. **Cấu hình kích hoạt UART khi khởi động**:
     1. Xem thẻ nhớ với phân vùng **bootfs** trên máy tính cá nhân
     2. Tìm file có tên là **config.txt** và mở nó bằng một trình soạn thảo văn bản (như Notepad)
-    3. Kéo xuống dưới cùng và thêm dòng sau vào:
+    3. Kéo xuống dưới cùng và thêm dòng sau vào. Mục đích là để kích hoạt chức năng UART trên các chân GPIO
 
         ```plain
         enable_uart=1
         ```
 
-    4. Lưu file lại, an toàn rút thẻ nhớ ra và cắm lại vào Raspberry Pi 4.
+        Ngay bên dưới cấu hình này, nếu muốn biến cổng Usb Type C để truyền UART luôn, nhưng phải hi sinh chức năng nối bàn phím, chuột thì hãy bổ sung cáu hình nữa:
+
+        ```plain
+        dtoverlay=dwc2,dr_mode=peripheral
+        ```
+
+        và đồng thời xóa cum [cm5] di vì nó nhằm kích hoạt tính năng kết nối chuột và bàn phím nên sẽ gây xung đột.
+
+        ```plain
+        [cm5]
+        dtoverlay=dwc2,dr_mode=host
+        ```
+
+    4. Nếu muốn dùng Usb Type C để truyền UART thì còn 2 bước thực hiện sau đây, nếu không muốn thì bỏ qua bước 4,5 .\
+    Tìm file có tên là **cmdline.txt** và mở nó bằng một trình soạn thảo văn bản (như Notepad).\
+    Tìm tới đoạn cấu hình `modules-load=dwc2,g_others` và thay thế bằng `modules-load=dwc2,g_serial`.
+    5. Và tiếp theo là chạy service phục vụ ở cổng UART đó.
+
+    ```shell
+    sudo systemctl enable getty@ttyGS0.service
+    sudo systemctl start getty@ttyGS0.service
+    ```
+
+    6. Lưu file lại, an toàn rút thẻ nhớ ra và cắm lại vào Raspberry Pi 4.
 5. Kết nối **Rasberry Pi** với module **usb2serial** theo qui tắc noối dây: 
     ![alt text](images/Pi4-usb2serial.png)
     ![alt text](images/Pi4-usb2serial.real.png)

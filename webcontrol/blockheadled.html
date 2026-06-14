@@ -1,0 +1,253 @@
+<div class="card p-4 shadow-sm border-0 bg-white h-100">
+    <div class="d-flex align-items-center mb-3">
+        <div class="p-2 rounded me-3" style="background-color: #f0f3ff; color: #5f27cd;">
+            <i class="fa-solid fa-microchip fa-2x"></i>
+        </div>
+        <div>
+            <h5 class="fw-bold text-dark mb-0">ĐÈN TRÍ TUỆ (INDEPENDENT)</h5>
+            <small class="text-muted">Hai bộ điều khiển LED chạy độc lập hoàn toàn</small>
+        </div>
+    </div>
+    
+    <div class="row align-items-center">
+        <div class="col-auto text-center border-end pe-4 me-2">
+            <div class="p-3 bg-white rounded d-flex flex-column align-items-center justify-content-center border" style="min-width: 120px; min-height: 130px;">
+                <i id="ledSimHex" class="fa-solid fa-lightbulb fa-4x" 
+                   style="color: #A020F0; transition: all 0.3s ease; filter: drop-shadow(0 0 12px #A020F0);"></i>
+                <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 0.5px;">LED 1 (HEX)</div>
+            </div>
+        </div>
+
+        <div class="col">
+            <div class="mb-1">
+                <label class="form-label fw-semibold text-secondary small mb-1">1. ĐIỀU KHIỂN QUA MÃ HEX / PALETTE</label>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center mb-3">
+                <div class="input-group input-group-sm" style="max-width: 220px;">
+                    <span class="input-group-text bg-dark text-white fw-bold">#</span>
+                    <input type="text" id="txtHexInput" class="form-control text-uppercase" value="A020F0" placeholder="A020F0" maxlength="6" oninput="handleTextInput(this.value)">
+                    <button class="btn btn-outline-secondary" type="button" onclick="openHexPalette()" title="Mở bảng màu">
+                        <i class="fa-solid fa-palette text-primary"></i>
+                    </button>
+                    <input type="color" id="pickerHex" value="#a020f0" style="position: absolute; width: 1px; height: 1px; opacity: 0; padding: 0; border: 0;" oninput="handlePaletteInput(this.value)">
+                </div>
+                
+                <button class="btn btn-success btn-sm fw-bold px-3 flex-grow-1" onclick="triggerHeadHex('on')">
+                    <i class="fa-solid fa-power-off me-1"></i> Bật
+                </button>
+                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1" onclick="triggerHeadHex('off')">
+                    <i class="fa-solid fa-lightbulb-slash me-1"></i> Tắt
+                </button>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center p-2 bg-light rounded border">
+                <div class="d-flex align-items-center gap-1">
+                    <span class="small text-muted fw-bold text-nowrap" style="font-size: 0.8rem;">Chớp:</span>
+                    <input type="number" id="blinkTimesHex" class="form-control form-control-sm text-center" value="5" min="1" max="20" style="width: 55px;">
+                </div>
+                <div class="d-flex align-items-center gap-1 flex-grow-1">
+                    <span class="small text-muted fw-bold text-nowrap" style="font-size: 0.8rem;">Tốc độ:</span>
+                    <select id="blinkSpeedHex" class="form-select form-select-sm">
+                        <option value="fast" selected>Fast</option>
+                        <option value="slow">Slow</option>
+                    </select>
+                </div>
+                <button class="btn btn-warning btn-sm fw-bold px-3" onclick="triggerHeadBlinkHex()">
+                    <i class="fa-solid fa-bolt me-1"></i> Chớp
+                </button>
+                <button class="btn btn-secondary btn-sm fw-bold px-3" onclick="triggerHeadHex('off')">
+                    Tắt
+                </button>
+            </div>
+            <div class="text-muted mt-1" style="font-size: 0.72rem;">Hệ thống nhận diện: <span id="lblColorNameHex" class="text-purple fw-bold">purple</span></div>
+        </div>
+    </div>
+
+    <hr class="my-4 text-muted opacity-50" style="border-top: 2px dashed #ccc;">
+
+    <div class="row align-items-center">
+        <div class="col-auto text-center border-end pe-4 me-2">
+            <div class="p-3 bg-white rounded d-flex flex-column align-items-center justify-content-center border" style="min-width: 120px; min-height: 130px;">
+                <i id="ledSimRgb" class="fa-solid fa-lightbulb fa-4x" 
+                   style="color: #00FF00; transition: all 0.3s ease; filter: drop-shadow(0 0 12px #00FF00);"></i>
+                <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 0.5px;">LED 2 (RGB)</div>
+            </div>
+        </div>
+        
+        <div class="col">
+            <div class="mb-1">
+                <label class="form-label fw-semibold text-secondary small mb-1">2. ĐIỀU KHIỂN QUA HỆ THẬP PHÂN RGB (0 - 255)</label>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center mb-3">
+                <div class="d-flex gap-1" style="max-width: 220px;">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-danger text-white fw-bold px-1" style="font-size: 0.75rem;">R</span>
+                        <input type="number" id="numR" class="form-control rgb-input p-1 text-center" value="0" min="0" max="255" oninput="handleRgbInput()">
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-success text-white fw-bold px-1" style="font-size: 0.75rem;">G</span>
+                        <input type="number" id="numG" class="form-control rgb-input p-1 text-center" value="255" min="0" max="255" oninput="handleRgbInput()">
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-primary text-white fw-bold px-1" style="font-size: 0.75rem;">B</span>
+                        <input type="number" id="numB" class="form-control rgb-input p-1 text-center" value="0" min="0" max="255" oninput="handleRgbInput()">
+                    </div>
+                </div>
+
+                <button class="btn btn-success btn-sm fw-bold px-3 flex-grow-1" onclick="triggerHeadRgb('on')">
+                    <i class="fa-solid fa-power-off me-1"></i> Bật
+                </button>
+                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1" onclick="triggerHeadRgb('off')">
+                    <i class="fa-solid fa-lightbulb-slash me-1"></i> Tắt
+                </button>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center p-2 bg-light rounded border">
+                <div class="d-flex align-items-center gap-1">
+                    <span class="small text-muted fw-bold text-nowrap" style="font-size: 0.8rem;">Chớp:</span>
+                    <input type="number" id="blinkTimesRgb" class="form-control form-control-sm text-center" value="5" min="1" max="20" style="width: 55px;">
+                </div>
+                <div class="d-flex align-items-center gap-1 flex-grow-1">
+                    <span class="small text-muted fw-bold text-nowrap" style="font-size: 0.8rem;">Tốc độ:</span>
+                    <select id="blinkSpeedRgb" class="form-select form-select-sm">
+                        <option value="fast" selected>Fast</option>
+                        <option value="slow">Slow</option>
+                    </select>
+                </div>
+                <button class="btn btn-warning btn-sm fw-bold px-3" onclick="triggerHeadBlinkRgb()">
+                    <i class="fa-solid fa-bolt me-1"></i> Chớp
+                </button>
+                <button class="btn btn-secondary btn-sm fw-bold px-3" onclick="triggerHeadRgb('off')">
+                    Tắt
+                </button>
+            </div>
+            <div class="text-muted mt-1" style="font-size: 0.72rem;">Hệ thống nhận diện: <span id="lblColorNameRgb" class="text-green fw-bold">green</span></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    console.log("🔋 Đã tối ưu hóa logic Inline Event và cập nhật đổ màu thực tế!");
+
+    const colorMap = {
+        '#FF0000': 'red', '#00FF00': 'green', '#0000FF': 'blue',
+        '#A020F0': 'purple', '#FFFF00': 'yellow', '#00FFFF': 'cyan',
+        '#FF00FF': 'magenta', '#FFFFFF': 'white', '#000000': 'black'
+    };
+
+    function componentToHex(c) {
+        var hex = c.toString(16);
+        return hex.length == 1 ? "0" + hex : hex;
+    }
+    function rgbToHex(r, g, b) {
+        return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+    }
+
+    // ==========================================
+    // ⚙️ LOGIC PHẦN 1: ĐIỀU KHIỂN THEO MÃ HEX
+    // ==========================================
+    function openHexPalette() {
+        document.getElementById('pickerHex').click();
+    }
+
+    function updateHexSimulation(hexColor) {
+        const ledHex = document.getElementById('ledSimHex');
+        // Sửa thuộc tính đổi màu lõi bóng đèn và hiệu ứng tỏa bóng (Glow shadow) ra nền sau
+        ledHex.style.color = hexColor; 
+        ledHex.style.filter = `drop-shadow(0 0 15px ${hexColor})`;
+        
+        const colorName = colorMap[hexColor.toUpperCase()] || hexColor.toUpperCase();
+        document.getElementById('lblColorNameHex').innerText = colorName;
+    }
+
+    // Xử lý khi chọn màu từ Palette bánh xe màu
+    function handlePaletteInput(colorValue) {
+        const hex = colorValue.toUpperCase();
+        document.getElementById('txtHexInput').value = hex.replace('#', '');
+        updateHexSimulation(hex);
+    }
+
+    // Xử lý khi tự gõ text mã màu vào ô input
+    function handleTextInput(textValue) {
+        let hex = textValue.trim().toUpperCase();
+        if(hex.length === 6) {
+            if(!hex.startsWith('#')) hex = '#' + hex;
+            document.getElementById('pickerHex').value = hex.toLowerCase();
+            updateHexSimulation(hex);
+        }
+    }
+
+    function getHexFinalColor() {
+        const hex = '#' + document.getElementById('txtHexInput').value.trim().toUpperCase();
+        return colorMap[hex] || hex;
+    }
+
+    function triggerHeadHex(state) {
+        const color = (state === 'off') ? 'black' : getHexFinalColor();
+        sendMQTTCommand(`Head(${state}, ${color})`);
+    }
+
+    function triggerHeadBlinkHex() {
+        const times = document.getElementById('blinkTimesHex').value || 5;
+        const speed = document.getElementById('blinkSpeedHex').value;
+        const color = getHexFinalColor();
+        sendMQTTCommand(`HeadBlink(${times}, ${speed}, ${color})`);
+    }
+
+
+    // ==========================================
+    // ⚙️ LOGIC PHẦN 2: ĐIỀU KHIỂN THEO HỆ RGB
+    // ==========================================
+    function updateRgbSimulation(hexColor) {
+        const ledRgb = document.getElementById('ledSimRgb');
+        // Sửa thuộc tính đổi màu lõi bóng đèn và hiệu ứng bóng nền cho khối RGB
+        ledRgb.style.color = hexColor;
+        ledRgb.style.filter = `drop-shadow(0 0 15px ${hexColor})`;
+        
+        const colorName = colorMap[hexColor.toUpperCase()] || hexColor.toUpperCase();
+        document.getElementById('lblColorNameRgb').innerText = colorName;
+    }
+
+    // Xử lý khi thay đổi các ô số R - G - B
+    function handleRgbInput() {
+        let rEl = document.getElementById('numR');
+        let gEl = document.getElementById('numG');
+        let bEl = document.getElementById('numB');
+
+        let r = Math.min(255, Math.max(0, parseInt(rEl.value) || 0));
+        let g = Math.min(255, Math.max(0, parseInt(gEl.value) || 0));
+        let b = Math.min(255, Math.max(0, parseInt(bEl.value) || 0));
+
+        // Chuẩn hóa lại hiển thị trong ô nếu người dùng gõ lố số
+        rEl.value = r; gEl.value = g; bEl.value = b;
+
+        const hex = rgbToHex(r, g, b);
+        updateRgbSimulation(hex);
+    }
+
+    function getRgbFinalColor() {
+        const r = parseInt(document.getElementById('numR').value) || 0;
+        const g = parseInt(document.getElementById('numG').value) || 0;
+        const b = parseInt(document.getElementById('numB').value) || 0;
+        const hex = rgbToHex(r, g, b);
+        return colorMap[hex] || hex;
+    }
+
+    function triggerHeadRgb(state) {
+        const color = (state === 'off') ? 'black' : getRgbFinalColor();
+        sendMQTTCommand(`Head(${state}, ${color})`);
+    }
+
+    function triggerHeadBlinkRgb() {
+        const times = document.getElementById('blinkTimesRgb').value || 5;
+        const speed = document.getElementById('blinkSpeedRgb').value;
+        const color = getRgbFinalColor();
+        sendMQTTCommand(`HeadBlink(${times}, ${speed}, ${color})`);
+    }
+
+    // Khởi tạo màu sắc bóng đèn chuẩn ban đầu khi vừa tải
+    updateHexSimulation('#A020F0');
+    updateRgbSimulation('#00FF00');
+</script>

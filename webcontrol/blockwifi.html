@@ -1,0 +1,470 @@
+<div class="card p-4 shadow-sm border-0 bg-white mx-auto" style="max-width: 950px;">
+    <div class="row align-items-center mb-4 pb-3 border-bottom">
+        <div class="col-md-5 d-flex align-items-center mb-3 mb-md-0">
+            <div class="p-2 rounded me-3" style="background-color: #e3f2fd; color: #0d6efd;">
+                <i class="fa-solid fa-terminal fa-2x"></i>
+            </div>
+            <div>
+                <h4 class="fw-bold text-dark mb-0">HỆ THỐNG ĐIỀU KHIỂN RASPBERRY PI</h4>
+                <small class="text-muted">Giao tiếp UART tĩnh - Kiểm soát lệnh chủ động</small>
+            </div>
+        </div>
+        
+        <div class="col-md-7 text-md-end">
+            <div class="d-inline-flex gap-2 align-items-center bg-light p-2 rounded border text-start w-100 justify-content-md-end">
+                <div>
+                    <span class="d-block small fw-bold text-secondary text-nowrap">Baudrate: <span class="text-primary">115200</span></span>
+                    <span id="comStatus" class="badge bg-secondary">Chưa kết nối</span>
+                    <span id="loginStatus" class="badge bg-dark ms-1">Chưa kiểm tra</span>
+                </div>
+                <button id="btnConnectSerial" type="button" class="btn btn-dark btn-sm fw-bold px-3" onclick="connectSerial()">
+                    <i class="fa-solid fa-plug me-1"></i> Chọn & Kết nối COM
+                </button>
+                <button id="btnDisconnectSerial" type="button" class="btn btn-danger btn-sm fw-bold px-3 d-none" onclick="disconnectSerial()">
+                    <i class="fa-solid fa-plug-circle-xmark me-1"></i> Hủy kết nối
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-5 border-end">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold text-secondary mb-0"><i class="fa-solid fa-satellite-dish me-1"></i> KẾT QUẢ QUÉT WIFI (NMCLI)</h6>
+                <button id="btnScanWifi" type="button" class="btn btn-outline-primary btn-sm fw-bold" onclick="startLinuxWifiScan()" disabled>
+                    <i id="scanIcon" class="fa-solid fa-rotate me-1"></i> Tìm mạng wifi
+                </button>
+            </div>
+
+            <div id="wifiListContainer" class="list-group overflow-y-auto border rounded p-1 bg-light mb-2" style="max-height: 240px; min-height: 240px;">
+                <div id="wifiPlaceholder" class="text-center text-muted my-auto pt-5">
+                    <i class="fa-solid fa-wifi fa-2x mb-2 opacity-50"></i>
+                    <p class="small mb-0">Vui lòng kết nối cổng COM để bắt đầu.</p>
+                </div>
+            </div>
+            <div class="text-end">
+                <small class="text-muted" style="font-size: 0.7rem;">Nhấn dòng mạng để tự động điền thông tin</small>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <h6 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-pen-to-square me-1"></i> CẤU HÌNH MẠNG MỚI</h6>
+            
+            <div class="mb-3">
+                <label for="wifiSsid" class="form-label fw-semibold text-secondary small mb-1">TÊN WI-FI (SSID)</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-network-wired"></i></span>
+                    <input type="text" id="wifiSsid" class="form-control" placeholder="Chọn mạng bên trái hoặc tự nhập...">
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label for="wifiPassword" class="form-label fw-semibold text-secondary small mb-1">MẬT KHẨU (PASSWORD)</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted"><i class="fa-solid fa-lock"></i></span>
+                    <input type="password" id="wifiPassword" class="form-control" placeholder="Nhập mật khẩu mạng...">
+                    <button class="btn btn-outline-secondary" type="button" onclick="toggleWifiPassword()">
+                        <i id="wifiPasswordIcon" class="fa-solid fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2">
+                <button type="button" class="btn btn-success fw-bold" onclick="sendWifiConfigUART()">
+                    <i class="fa-solid fa-paper-plane me-2"></i> Gửi cấu hình cho Robot (UART)
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm border-0" onclick="clearWifiInputs()">
+                    Xóa dữ liệu nhập
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    console.log("📟 Hệ thống điều khiển UART tĩnh đã sẵn sàng!");
+
+    let serialPort = null;
+    let serialWriter = null;
+    let serialReader = null;
+    let keepReading = true;
+
+    let rawTerminalBuffer = ""; 
+    let parseTimeout = null;
+
+    // Các trạng thái: 'IDLE' (Chờ bấm nút) -> 'SCANNING' (Đang quét mạng)
+    let currentSystemState = 'IDLE'; 
+
+    // --- LOGIC KẾT NỐI CỔNG COM TĨNH ---
+    async function connectSerial() {
+        if (!("serial" in navigator)) {
+            alert("Trình duyệt không hỗ trợ Web Serial API!");
+            return;
+        }
+
+        try {
+            serialPort = await navigator.serial.requestPort();
+            await serialPort.open({ 
+                baudRate: 115200,
+                dataBits: 8,
+                stopBits: 1,
+                parity: "none",
+                flowControl: "none"
+            });
+            
+            const textEncoder = new TextEncoderStream();
+            textEncoder.readable.pipeTo(serialPort.writable);
+            serialWriter = textEncoder.writable.getWriter();
+
+            // Thay đổi giao diện: Sẵn sàng, không bắt người dùng đợi tự động đăng nhập nữa
+            document.getElementById('comStatus').innerText = "Đã kết nối COM";
+            document.getElementById('comStatus').className = "badge bg-success";
+            document.getElementById('loginStatus').innerText = "Sẵn sàng";
+            document.getElementById('loginStatus').className = "badge bg-primary";
+            
+            document.getElementById('btnConnectSerial').classList.add('d-none');
+            document.getElementById('btnDisconnectSerial').classList.remove('d-none');
+            
+            // MỞ KHÓA NGAY nút Tìm mạng wifi để người dùng chủ động bấm
+            document.getElementById('btnScanWifi').disabled = false;
+
+            document.getElementById('wifiPlaceholder').innerHTML = `
+                <div class="text-center text-success py-4">
+                    <i class="fa-solid fa-circle-check fa-2x mb-2"></i>
+                    <p class="small mb-0">Kết nối cổng COM thành công!<br>Hãy bấm nút <b>"Tìm mạng wifi"</b> phía trên để quét.</p>
+                </div>
+            `;
+
+            if (typeof writeLog === "function") writeLog("[SERIAL] Đã thông suốt cổng COM (8-N-1). Chờ lệnh từ người dùng...");
+
+            currentSystemState = 'IDLE';
+            keepReading = true;
+            rawTerminalBuffer = "";
+            
+            // Kích hoạt luồng lắng nghe dữ liệu
+            readSerialData();
+
+        } catch (error) {
+            console.error(error);
+            disconnectSerial();
+            if (typeof writeLog === "function") writeLog(`[SERIAL LỖI]: ${error.message}`);
+        }
+    }
+
+    // --- HỦY KẾT NỐI ---
+    async function disconnectSerial() {
+        keepReading = false;
+        if (serialReader) { try { await serialReader.cancel(); serialReader.releaseLock(); } catch (e) {} }
+        if (serialWriter) { try { serialWriter.releaseLock(); } catch (e) {} }
+        if (serialPort) { try { await serialPort.close(); } catch (e) {} }
+
+        serialPort = null; serialWriter = null; serialReader = null;
+
+        document.getElementById('comStatus').innerText = "Chưa kết nối";
+        document.getElementById('comStatus').className = "badge bg-secondary";
+        document.getElementById('loginStatus').innerText = "Chưa kiểm tra";
+        document.getElementById('loginStatus').className = "badge bg-dark";
+        document.getElementById('btnConnectSerial').classList.remove('d-none');
+        document.getElementById('btnDisconnectSerial').classList.add('d-none');
+        document.getElementById('btnScanWifi').disabled = true;
+        
+        document.getElementById('wifiListContainer').innerHTML = `
+            <div class="text-center text-muted my-auto pt-5">
+                <i class="fa-solid fa-wifi fa-2x mb-2 opacity-50"></i>
+                <p class="small mb-0">Vui lòng kết nối cổng COM để bắt đầu.</p>
+            </div>
+        `;
+        if (typeof writeLog === "function") writeLog("🛑 Đã ngắt cổng COM.");
+    }
+
+    let scanDataTimer = null; // Biến kiểm soát đồng hồ đợi riêng cho việc quét mạng
+
+    // --- LUỒNG HỨNG RX TRỰC TIẾP CỨU NGHẼN (GOM ĐỆM KIÊN NHẪN) ---
+    async function readSerialData() {
+        serialReader = serialPort.readable.getReader();
+        const decoder = new TextDecoder();
+
+        try {
+            while (keepReading) {
+                const { value, done } = await serialReader.read();
+                if (done) break;
+                
+                if (value) {
+                    const decodedText = decoder.decode(value);
+                    rawTerminalBuffer += decodedText;
+
+                    // 💡 TRẠNG THÁI QUÉT MẠNG: Tuyệt đối không chạy hàm parse tự động ngắt quãng!
+                    if (currentSystemState === 'SCANNING') {
+                        // Trình duyệt âm thầm gom toàn bộ chữ đổ về UART vào bộ đệm rawTerminalBuffer
+                        // và không làm gì cả, nhường toàn bộ thời gian cho Pi nhả chữ.
+                        if (typeof writeLog === "function") {
+                            // Chỉ in log thô ra màn hình nền để Dev theo dõi dòng chảy
+                            console.log("[UART Nhận luồng quét]:", decodedText);
+                        }
+                    } 
+                    // CÁC TRẠNG THÁI KHÁC (Đăng nhập, lệnh tĩnh ngắn...): Giữ nguyên bộ gom trễ ngắn để phản hồi nhanh
+                    else {
+                        clearTimeout(parseTimeout);
+                        parseTimeout = setTimeout(() => {
+                            const tempClean = rawTerminalBuffer.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+                            if (typeof writeLog === "function") {
+                                const htmlSafeText = tempClean.replace(/\r/g, "").replace(/\n/g, "<br>");
+                                writeLog(`<span style="color: #00FF00; font-weight: bold;">[UART Rx]:<br>${htmlSafeText}</span>`);
+                            }
+                            parseTerminalLogic();
+                        }, 100);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Lỗi đọc luồng UART:", error);
+        } finally {
+            try { serialReader.releaseLock(); } catch(e){}
+        }
+    }
+
+    // --- BỘ XỬ LÝ TRẠNG THÁI TERMINAL ---
+    function parseTerminalLogic() {
+        // Dọn sạch mã ANSI rác trong bộ đệm để đối chiếu chuỗi chính xác
+        const cleanBuffer = rawTerminalBuffer.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+
+        // 💡 XỬ LÝ ĐĂNG NHẬP DỰ PHÒNG: Nếu bỗng dưng Pi đá ra màn hình đăng nhập
+        if (cleanBuffer.includes("login:")) {
+            if (typeof writeLog === "function") writeLog("🎯 [AUTO-LOGIN] Phát hiện yêu cầu đăng nhập, tự động gửi: <b>pi</b>");
+            rawTerminalBuffer = "";
+            setTimeout(() => { serialWriter.write("pi\r"); }, 100);
+            return;
+        }
+        if (cleanBuffer.includes("Password:")) {
+            if (typeof writeLog === "function") writeLog("🎯 [AUTO-LOGIN] Tự động gửi mật khẩu: <b>raspberry</b>");
+            rawTerminalBuffer = "";
+            setTimeout(() => { serialWriter.write("raspberry\r"); }, 100);
+            return;
+        }
+
+        // CHÍNH: Hứng kết quả khi ở trạng thái SCANNING và thấy lệnh chạy xong (xuất hiện lại dấu nhắc lệnh $ hoặc @)
+        if (currentSystemState === 'SCANNING' && (cleanBuffer.includes("pi@") || cleanBuffer.includes("$") || cleanBuffer.includes("~"))) {
+            if (typeof writeLog === "function") writeLog("✅ [UART] Đã hứng trọn gói luồng dữ liệu quét từ nmcli.");
+            
+            document.getElementById('scanIcon').classList.remove('fa-spin');
+            document.getElementById('btnScanWifi').disabled = false;
+            
+            // Gọi hàm render danh sách mạng sạch
+            parseAndRenderNmcliWifi(cleanBuffer);
+            
+            currentSystemState = 'IDLE';
+            rawTerminalBuffer = "";
+        }
+    }
+
+    // --- KÍCH HOẠT LỆNH QUÉT MẠNG KHI BẤM NÚT ---
+    function startLinuxWifiScan() {
+        const icon = document.getElementById('scanIcon');
+        icon.classList.add('fa-spin');
+        document.getElementById('btnScanWifi').disabled = true;
+
+        document.getElementById('wifiListContainer').innerHTML = `
+            <div class="text-center text-muted my-auto pt-5">
+                <i class="fa-solid fa-hourglass-half fa-spin fa-2x mb-2 text-primary"></i>
+                <p class="small mb-0 fw-bold">Đang đóng băng luồng để đợi dữ liệu từ Pi...</p>
+                <small class="text-warning d-block mt-1" style="font-size:0.7rem;">Hệ thống đang thu thập dữ liệu Wi-Fi trong 3.5 giây, vui lòng đợi.</small>
+            </div>
+        `;
+
+        rawTerminalBuffer = "";
+        currentSystemState = 'SCANNING'; // Chuyển sang chế độ đóng băng bộ phân tích
+
+        // Gửi nút Enter mồi giải phóng terminal
+        serialWriter.write("\r");
+        
+        setTimeout(() => {
+            // Chuỗi lệnh quét chuẩn của bạn
+            const combinedCommand = "sudo nmcli dev wifi rescan | cat; sleep 1.5; sudo nmcli -t -f SSID,SIGNAL,SECURITY dev wifi list | cat";
+            serialWriter.write(combinedCommand + "\r");
+            
+            // 💡 QUYẾT ĐỊNH CHÍ MẠNG: Ép trình duyệt đợi đúng 3500ms (3.5 giây) 
+            // Bất luận Pi trả về nhanh hay chậm, cứ hết 3.5 giây mới mở đệm ra xử lý một thể!
+            clearTimeout(scanDataTimer);
+            scanDataTimer = setTimeout(() => {
+                
+                // Tiến hành xử lý dọn rác mã ANSI điều hướng terminal
+                const cleanBuffer = rawTerminalBuffer.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+                
+                if (typeof writeLog === "function") {
+                    const htmlSafeText = cleanBuffer.replace(/\r/g, "").replace(/\n/g, "<br>");
+                    writeLog(`<span style="color: #00FF00; font-weight: bold;">[UART Rx - Kết quả sau 3.5s]:<br>${htmlSafeText}</span>`);
+                }
+
+                // Nhả trạng thái nút bấm về bình thường
+                icon.classList.remove('fa-spin');
+                document.getElementById('btnScanWifi').disabled = false;
+                
+                // Gọi hàm bóc tách dữ liệu tối hậu
+                parseAndRenderNmcliWifi(cleanBuffer);
+                
+                // Trả hệ thống về trạng thái tĩnh chờ lệnh tiếp theo
+                currentSystemState = 'IDLE';
+                rawTerminalBuffer = "";
+                
+            }, 3500); // 3500ms hoàn hảo cho mọi dòng card mạng Pi
+
+        }, 150);
+    }
+
+    // --- BỘ PHÂN TÁCH CHUỖI SẠCH VÀ HIỂN THỊ ---
+    function parseAndRenderNmcliWifi(cleanText) {
+        const container = document.getElementById('wifiListContainer');
+        container.innerHTML = "";
+
+        const lines = cleanText.split('\n');
+        let processedSsids = []; 
+
+        lines.forEach(line => {
+            let cleanLine = line.trim();
+            if (!cleanLine || cleanLine.includes("nmcli dev wifi") || cleanLine.startsWith("pi@") || cleanLine.includes("$")) return;
+
+            let parts = cleanLine.split(':');
+            if (parts.length >= 2) {
+                let ssid = parts[0].trim();
+                let signal = parts[1].trim();
+                let security = parts[2] ? parts[2].trim() : "Open";
+
+                // Loại bỏ triệt để các ký tự phi ASCII điều hướng còn sót
+                ssid = ssid.replace(/[^\x20-\x7E]/g, '');
+
+                if (ssid !== "" && !processedSsids.includes(ssid)) {
+                    processedSsids.push(ssid);
+
+                    let signalInt = parseInt(signal) || 0;
+                    let wifiColorClass = "text-danger";
+                    if (signalInt >= 75) wifiColorClass = "text-success";
+                    else if (signalInt >= 45) wifiColorClass = "text-warning";
+
+                    const btn = document.createElement('button');
+                    btn.type = "button";
+                    btn.className = "list-group-item list-group-item-action d-flex justify-content-between align-items-center small py-2";
+                    btn.innerHTML = `
+                        <div>
+                            <i class="fa-solid fa-wifi me-2 ${wifiColorClass}"></i>
+                            <b>${ssid}</b>
+                            <span class="badge bg-light text-dark border ms-1" style="font-size:0.65rem;">${security}</span>
+                        </div>
+                        <span class="badge bg-secondary rounded-pill">${signalInt}%</span>
+                    `;
+                    
+                    btn.onclick = function() {
+                        document.getElementById('wifiSsid').value = ssid;
+                    };
+                    container.appendChild(btn);
+                }
+            }
+        });
+
+        if (processedSsids.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-danger my-auto pt-5">
+                    <i class="fa-solid fa-triangle-exclamation fa-2x mb-2"></i>
+                    <p class="small fw-bold mb-0">Không bóc tách được mạng! Bấm quét lại hoặc kiểm tra log Terminal thô.</p>
+                </div>
+            `;
+        }
+    }
+
+    // --- LỆNH GỬI CẤU HÌNH QUA UART (WifiNew) ---
+    let connectWifiTimer = null; // Biến kiểm soát thời gian đợi kết nối Wi-Fi
+
+    // --- LỆNH GỬI CẤU HÌNH QUA UART BẰNG PHƯƠNG PHÁP LỆNH SHELL LINUX ---
+    function sendWifiConfigUART() {
+        const ssid = document.getElementById('wifiSsid').value.trim();
+        const password = document.getElementById('wifiPassword').value.trim();
+
+        if (!ssid) {
+            alert("Vui lòng chọn hoặc nhập tên mạng Wi-Fi (SSID)!");
+            return;
+        }
+
+        // Đổi trạng thái hệ thống sang CONNECTING để tạm dừng các bộ parse tự động khác
+        currentSystemState = 'CONNECTING_WIFI';
+        rawTerminalBuffer = "";
+
+        // Thay đổi giao diện thông báo cho người dùng biết hệ thống đang cấu hình
+        const container = document.getElementById('wifiListContainer');
+        container.innerHTML = `
+            <div class="text-center text-muted my-auto pt-5 px-2">
+                <i class="fa-solid fa-network-wired fa-spin fa-2x mb-2 text-success"></i>
+                <p class="small mb-0 fw-bold">Đang cấu hình Wi-Fi cho Robot...</p>
+                <small class="text-secondary d-block mt-1" style="font-size:0.7rem;">Pi đang thực hiện kết nối Shell, vui lòng đợi 3 giây.</small>
+            </div>
+        `;
+
+        // Gửi Enter mồi để dọn sạch dòng lệnh cũ trên Pi
+        serialWriter.write("\r");
+        
+        setTimeout(() => {
+            // 💡 GIẢI PHÁP LỆNH SHELL: Tạo chuỗi lệnh nmcli kết nối Wi-Fi trực tiếp
+            // Bao bọc SSID và Password trong dấu ngoặc kép "" để chống lỗi khi tên Wi-Fi có khoảng trắng
+            const shellCommand = `sudo nmcli dev wifi connect "${ssid}" password "${password}"`;
+            
+            // Gửi lệnh Shell xuống Pi qua Tx UART
+            serialWriter.write(shellCommand + "\r");
+            if (typeof writeLog === "function") writeLog(`⚙️ [UART EXEC Shell]: <span class="text-warning">${shellCommand}</span>`);
+
+            // 💡 ĐÓNG BĂNG LUỒNG 3 GIÂY: Đợi Pi phản hồi kết quả kết nối mạng
+            clearTimeout(connectWifiTimer);
+            connectWifiTimer = setTimeout(() => {
+                
+                // Lọc sạch mã ANSI điều hướng trong đệm phản hồi
+                const cleanBuffer = rawTerminalBuffer.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+                
+                if (typeof writeLog === "function") {
+                    const htmlSafeText = cleanBuffer.replace(/\r/g, "").replace(/\n/g, "<br>");
+                    writeLog(`<span style="color: #00FFFF; font-weight: bold;">[UART Rx - Kết quả kết nối]:<br>${htmlSafeText}</span>`);
+                }
+
+                // --- KIỂM TRA KẾT QUẢ TRẢ VỀ TỪ SHELL LINUX ---
+                if (cleanBuffer.toLowerCase().includes("successfully activated") || cleanBuffer.toLowerCase().includes("thành công")) {
+                    container.innerHTML = `
+                        <div class="text-center text-success my-auto pt-5 px-2 animate__animated animate__scaleIn">
+                            <i class="fa-solid fa-circle-check fa-3x mb-2"></i>
+                            <p class="small fw-bold mb-0">Robot kết nối Wi-Fi THÀNH CÔNG!</p>
+                            <small class="text-muted" style="font-size:0.7rem;">Mạng hiện tại: ${ssid}</small>
+                        </div>
+                    `;
+                } else {
+                    // Trường hợp sai mật khẩu hoặc timeout kết nối từ phía Linux
+                    container.innerHTML = `
+                        <div class="text-center text-danger my-auto pt-4 px-2">
+                            <i class="fa-solid fa-circle-xmark fa-2x mb-2"></i>
+                            <p class="small fw-bold mb-0">Kết nối thất bại hoặc sai mật khẩu!</p>
+                            <small class="text-muted d-block" style="font-size:0.65rem;">Chi tiết lỗi đã được in ở bảng Log Monitor phía dưới.</small>
+                            <button class="btn btn-xs btn-outline-secondary mt-2" style="font-size: 0.7rem;" onclick="document.getElementById('btnScanWifi').click()">Quét lại mạng</button>
+                        </div>
+                    `;
+                }
+
+                // Trả hệ thống về trạng thái tĩnh chờ lệnh
+                currentSystemState = 'IDLE';
+                rawTerminalBuffer = "";
+
+            }, 3000); // 3 giây là thời gian tiêu chuẩn cho lệnh connect của nmcli
+
+        }, 150);
+    }
+
+    function toggleWifiPassword() {
+        const passInp = document.getElementById('wifiPassword');
+        const icon = document.getElementById('wifiPasswordIcon');
+        if (passInp.type === "password") {
+            passInp.type = "text";
+            icon.className = "fa-solid fa-eye-slash";
+        } else {
+            passInp.type = "password";
+            icon.className = "fa-solid fa-eye";
+        }
+    }
+
+    function clearWifiInputs() {
+        document.getElementById('wifiSsid').value = '';
+        document.getElementById('wifiPassword').value = '';
+    }
+</script>

@@ -6,17 +6,17 @@ After=bluetooth.target
 Type=simple
 WorkingDirectory=/home/pi/tjbot_conn
 
-# --- KHỐI LỆNH 1: Ép hạ tầng Bluetooth mở hoàn toàn ---
-ExecStartPre=/bin/bash -c "rfkill unblock bluetooth && systemctl restart bluetooth && sleep 2"
-ExecStartPre=/usr/bin/bluetoothctl -- power on
-ExecStartPre=/usr/bin/bluetoothctl -- pairable on
-ExecStartPre=/usr/bin/bluetoothctl -- discoverable on
-
-# Tự động đồng ý và mở chế độ đón nhận mọi yêu cầu kết nối từ thiết bị ngoài
-ExecStartPre=/bin/bash -c "/usr/bin/bt-agent -c NoInputNoOutput & sleep 1"
+# --- KHỐI LỆNH 1: Ủy quyền toàn bộ cấu hình phần cứng cho file Script .sh của bạn ---
+ExecStartPre=/home/pi/tjbot_conn/setting_bluetooth.sh
 
 # --- KHỐI LỆNH 2: Khởi chạy file Python quản lý ---
 ExecStart=/home/pi/tjbot_conn/venv/bin/python3 wifi_provisioning.py
+
+# --- KHỐI LỆNH 3: CẤU HÌNH CHỐNG TREO KHI STOP (BỔ SUNG MỚI) ---
+# Ép diệt sạch toàn bộ các tiến trình con (bao gồm cả lệnh rfcomm listen trong Python)
+KillMode=control-group
+# Nếu sau 3 giây không chịu tự tắt, Systemd sẽ dùng vũ lực ép chết ngay lập tức
+TimeoutStopSec=3
 
 Restart=always
 RestartSec=5

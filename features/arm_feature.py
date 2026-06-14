@@ -2,10 +2,12 @@
 import time
 from gpiozero import AngularServo
 
+SERVO_PIN = 7   # ứng với pin 26   
+
 try:
     # Nới rộng xung ra góc cực đại: 0.45ms (0.00045) đến 2.45ms (0.00245)
     servo = AngularServo(
-        7, 
+        SERVO_PIN, 
         min_angle=-90, 
         max_angle=90, 
         min_pulse_width=0.00045, 
@@ -112,6 +114,6 @@ def selftest():
 
 # Đăng ký hàm với hệ thống MQTT
 def register(actions_map):
-    actions_map["Wavehand"] = {"func": wave_hand, "params": "speed=fast|low, times=3", "example": "wave_hand(slow, 5)"}
-    actions_map["Arm"] = {"func": set_arm_angle, "params": "angle=0", "example": "set_arm(45)"}
+    actions_map["Wavehand"] = {"func": wave_hand, "params": "speed=fast|low, times=3", "example": "Wavehand(slow, 5)"}
+    actions_map["Arm"] = {"func": set_arm_angle, "params": "angle=0", "example": "Arm(45)"}
     print("-> [HỆ THỐNG] Đã đăng ký tính năng: Cánh tay Servo")

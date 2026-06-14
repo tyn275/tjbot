@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TJBot MQTT Control Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f6f9;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .navbar-custom {
+            background-color: #1e272e;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+/* 💡 CẬP NHẬT: CSS Sidebar hỗ trợ co giãn mượt mà */
+        .sidebar {
+            width: 260px;
+            min-height: calc(100vh - 56px);
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+            position: relative;
+            background-color: #2c3e50;
+            background-image:
+                linear-gradient(to bottom, #2c3e50 0%, #2c3e50 50%, rgba(44, 62, 80, 0.9) 75%, rgba(44, 62, 80, 0.3) 100%),
+                url('https://toolhub.app/tjbot/assets/images/lasertj2-594x595.png');
+            background-size: 100% auto;
+            background-position: center bottom;
+            background-repeat: no-repeat;
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Hiệu ứng kéo dãn */
+            overflow-x: hidden;
+            white-space: text-nowrap;
+        }
+
+        /* 💡 THÊM MỚI: Trạng thái Sidebar khi thu nhỏ thành Icon-only */
+        .sidebar.collapsed {
+            width: 65px; /* Chỉ đủ chứa Icon */
+            background-image: none; /* Ẩn ảnh nền robot phía dưới để đỡ rối mắt */
+        }
+
+        .sidebar .nav-link {
+            color: #dcdde1;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px; /* Tăng khoảng cách để tách biệt hẳn với icon khi co giãn */
+            font-weight: 500;
+            border-left: 4px solid transparent;
+            transition: all 0.2s ease;
+            position: relative;
+            z-index: 2;
+            width: 260px; /* Cố định chiều rộng vùng nội dung để chữ không bị rớt dòng khi thu hẹp */
+        }
+
+        .sidebar .nav-link i {
+            font-size: 1.1rem;
+            width: 20px; /* Cố định chiều rộng khung icon để căn chỉnh lề dọc luôn thẳng hàng */
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        /* 💡 THÊM MỚI: Ẩn chữ và hiệu ứng text chuyển động mượt mà */
+        .sidebar .nav-link span {
+            transition: opacity 0.2s ease;
+            opacity: 1;
+        }
+
+        .sidebar.collapsed .nav-link span {
+            opacity: 0;
+            pointer-events: none; /* Không cho tương tác với chữ ẩn */
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: #fff;
+            background-color: rgba(52, 73, 94, 0.8);
+            border-left: 4px solid #f1c40f;
+        }
+
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 56px);
+            overflow: hidden;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .content-section {
+            display: none;
+            height: 100%;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .intro-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .iframe-container {
+            flex: 1;
+            width: 100%;
+            border: 1px solid #dcdde1;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            background-color: #fff;
+            overflow: hidden;
+        }
+
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            background-color: #7f8c8d;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .status-dot.connected {
+            background-color: #2ecc71;
+            box-shadow: 0 0 10px #2ecc71;
+        }
+
+        .log-monitor {
+            background-color: #1e272e;
+            color: #2ecc71;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.85rem;
+            padding: 10px 20px;
+            height: 120px;
+            overflow-y: auto;
+            border-top: 2px solid #2c3e50;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom px-4">
+        <div class="container-fluid">
+            <button class="btn btn-outline-light btn-sm me-3" id="btnToggleSidebar" onclick="toggleSidebar()">
+                <i class="fa-solid fa-bars"></i>
+            </button>            
+            <a class="navbar-brand fw-bold text-warning" href="#">
+                <i class="fa-solid fa-robot me-2"></i>Trung tâm điều khiển
+            </a>
+            <div class="d-flex align-items-center gap-2 ms-auto">
+                <span class="text-light small me-2">
+                    <span id="statusDot" class="status-dot me-1"></span>
+                    <span id="statusText">Chưa kết nối</span>
+                </span>
+                <div class="input-group input-group-sm" style="width: 200px;">
+                    <input type="text" id="botIdInput" class="form-control" value="tjbot1" placeholder="Nhập BotID...">
+                    <button class="btn btn-outline-warning dropdown-toggle" type="button"
+                        data-bs-toggle="dropdown"></button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-menu-item dropdown-item" href="#"
+                                onclick="selectBotId('tjbot1')">tjbot1</a></li>
+                        <li><a class="dropdown-menu-item dropdown-item" href="#"
+                                onclick="selectBotId('tjbot2')">tjbot2</a></li>
+                    </ul>
+                </div>
+                <button id="btnConnect" class="btn btn-success btn-sm fw-bold px-3" onclick="connectMQTT()">Kết
+                    nối</button>
+                <button id="btnDisconnect" class="btn btn-danger btn-sm fw-bold px-3 d-none"
+                    onclick="disconnectMQTT()">Ngắt</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="d-flex flex-row flex-grow-1" style="overflow: hidden;">
+        <div class="sidebar d-flex flex-column" id="sidebarMenu"
+            <ul class="nav flex-column show" id="menuList">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="switchSection('intro', this)">
+                        <i class="fa-solid fa-circle-info"></i> <span>Giới thiệu</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" id="btn-menu-gym" href="#" onclick="switchSection('gym', this)">
+                        <i class="fa-solid fa-dumbbell"></i> <span>Phòng tập</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="switchSection('actions', this)">
+                        <i class="fa-solid fa-bolt"></i> <span>Hành động</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="switchSection('wifi', this)">
+                        <i class="fa-solid fa-gear"></i> <span>Cấu hình</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="main-wrapper">
+            <div class="main-content">
+
+                <div id="section-intro" class="content-section active">
+                    <div class="intro-container">
+                        <div class="iframe-container">
+                            <iframe src="https://toolhub.app/tjbot/" title="Toolhub TJBot Home"></iframe>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="section-gym" class="content-section">
+                    <div class="row row-cols-1 row-cols-md-2 g-4" id="gymLayoutContainer">
+                        <div class="col" id="col-head-led">
+                            <div class="text-center p-5 text-muted bg-white rounded shadow-sm">
+                                <i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải bảng điều khiển đèn...
+                            </div>
+                        </div>
+                        <div class="col" id="col-arm-servo">
+                            <div class="text-center p-5 text-muted bg-white rounded shadow-sm">
+                                <i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải bảng điều khiển cánh tay...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="section-actions" class="content-section">
+                    <div class="card p-4 shadow-sm border-0 bg-white">
+                        <h3><i class="fa-solid fa-bolt text-warning me-2"></i>Hành động (Actions)</h3>
+                        <p class="text-muted mt-3">Chạy các kịch bản cử động nâng cao.</p>
+                    </div>
+                </div>
+
+                <div id="section-wifi" class="content-section">
+                    <div id="col-wifi-config">
+                        <div class="text-center p-5 text-muted bg-white rounded shadow-sm">
+                            <i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải cấu hình thiết bị...
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="log-monitor" id="logMonitor">
+                [SYSTEM] Sẵn sàng điều khiển hệ thống. Hãy cấu hình BotID và bấm nút Kết nối...
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"
+        type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let mqttClient = null;
+
+        window.onload = function () {
+            writeLog("🚀 Hệ thống đã sẵn sàng. Đang đồng bộ giao diện...");
+            setTimeout(function() {
+                const gymBtn = document.getElementById('btn-menu-gym');
+                if (gymBtn) {
+                    switchSection('gym', gymBtn);
+                    writeLog("[UI] Tự động chuyển vùng mặc định: PHÒNG TẬP.");
+                } else {
+                    loadGymBlocks();
+                }
+            }, 50);
+        };
+
+        function writeLog(text) {
+            const logBox = document.getElementById('logMonitor');
+            const time = new Date().toLocaleTimeString();
+            logBox.innerHTML += `<br>[${time}] ${text}`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function selectBotId(id) {
+            document.getElementById('botIdInput').value = id;
+            writeLog(`[SYSTEM] Đã chọn nhanh BotID: ${id}`);
+        }
+
+        // HÀM CHUYỂN PHÂN HỆ
+        function switchSection(sectionId, element) {
+            document.querySelectorAll('.sidebar .nav-link').forEach(link => link.classList.remove('active'));
+            element.classList.add('active');
+
+            document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
+            document.getElementById(`section-${sectionId}`).classList.add('active');
+            writeLog(`[UI] Chuyển hướng sang phân hệ: ${sectionId.toUpperCase()}`);
+
+            if (sectionId === 'gym') {
+                loadGymBlocks();
+            }
+            // 💡 THÊM MỚI: Nếu click vào phân hệ wifi, kích hoạt tiến trình nạp file blockwifi.html
+            if (sectionId === 'wifi') {
+                loadWifiBlock();
+            }
+        }
+
+        // --- HÀM NẠP PHÒNG TẬP (CẢI TIẾN CÔ LẬP SCRIPT) ---
+        function loadGymBlocks() {
+            // Thêm cờ chặn nạp lại nếu đã tồn tại để tối ưu hiệu năng
+            if (document.getElementById('headLedLoaded')) {
+                console.log("[UI] Các block Gym đã tồn tại, bỏ qua fetch lại.");
+                return;
+            }
+
+            fetch('blockheadled.html')
+                .then(response => response.text())
+                .then(html => {
+                    const container = document.getElementById('col-head-led');
+                    // Đánh dấu nhận diện bằng một thẻ ẩn để không bị nạp lặp
+                    container.innerHTML = '<div id="headLedLoaded"></div>' + html;
+                    
+                    // Thực thi script cô lập bằng cơ chế Eval
+                    const scripts = container.querySelectorAll('script');
+                    scripts.forEach(oldScript => {
+                        try {
+                            window.eval(oldScript.text);
+                        } catch(e) { console.error("Lỗi thực thi script Head-Led:", e); }
+                    });
+                }).catch(err => {
+                    document.getElementById('col-head-led').innerHTML = `<div class="alert alert-danger">Không thể tải file blockheadled.html</div>`;
+                });
+
+            fetch('blockarm.html')
+                .then(response => response.text())
+                .then(html => {
+                    const container = document.getElementById('col-arm-servo');
+                    container.innerHTML = html;
+                    
+                    // Thực thi script cô lập bằng cơ chế Eval
+                    const scripts = container.querySelectorAll('script');
+                    scripts.forEach(oldScript => {
+                        try {
+                            window.eval(oldScript.text);
+                        } catch(e) { console.error("Lỗi thực thi script Arm-Servo:", e); }
+                    });
+                }).catch(err => {
+                    document.getElementById('col-arm-servo').innerHTML = `<div class="alert alert-danger">Không thể tải file blockarm.html</div>`;
+                });
+        }
+
+        // --- HÀM NẠP WIFI (CẢI TIẾN CÔ LẬP SCRIPT) ---
+        function loadWifiBlock() {
+            // Thêm cờ chặn nạp lại nếu đã tồn tại
+            if (document.getElementById('wifiConfigLoaded')) {
+                console.log("[UI] Block Wifi đã tồn tại, bỏ qua fetch lại.");
+                return;
+            }
+
+            fetch('blockwifi.html')
+                .then(response => response.text())
+                .then(html => {
+                    const container = document.getElementById('col-wifi-config');
+                    container.innerHTML = '<div id="wifiConfigLoaded"></div>' + html;
+                    writeLog("[UI] Đã nhúng blockwifi.html vào hệ thống.");
+
+                    // Thực thi script cô lập bằng cơ chế Eval
+                    const scripts = container.querySelectorAll('script');
+                    scripts.forEach(oldScript => {
+                        try {
+                            window.eval(oldScript.text);
+                        } catch(e) { console.error("Lỗi thực thi script Wifi:", e); }
+                    });
+                })
+                .catch(err => {
+                    document.getElementById('col-wifi-config').innerHTML = `<div class="alert alert-danger">Không thể tải file blockwifi.html</div>`;
+                });
+        }
+      
+        // HÀM DÙNG CHUNG ĐỂ GỬI LỆNH MQTT
+        function sendMQTTCommand(payloadString) {
+            if (!mqttClient || !mqttClient.isConnected()) {
+                writeLog(`❌ [LỖI LỆNH]: Chưa kết nối MQTT. Không thể gửi: ${payloadString}`);
+                alert("Vui lòng nhấn nút 'Kết nối' MQTT trên thanh Title Bar trước!");
+                return;
+            }
+            const botId = document.getElementById('botIdInput').value.trim();
+            const topicSub = `${botId}/commands`;
+
+            const message = new Paho.MQTT.Message(payloadString);
+            message.destinationName = topicSub;
+            mqttClient.send(message);
+
+            writeLog(`📤 [COMMAND SENT] -> Kênh [${topicSub}]: <span class="text-warning">${payloadString}</span>`);
+        }
+
+        // --- HỆ THỐNG KẾT NỐI MQTT ---
+        function connectMQTT() {
+            const botId = document.getElementById('botIdInput').value.trim();
+            if (!botId) {
+                alert("Vui lòng nhập hoặc chọn một BotID!");
+                return;
+            }
+
+            document.getElementById('statusText').innerText = "Đang kết nối WSS...";
+            document.getElementById('btnConnect').disabled = true;
+            writeLog(`[MQTT] Khởi động luồng mạng wss://mqtt.toolhub.app:8084...`);
+
+            const brokerHost = "mqtt.toolhub.app";
+            const brokerPort = 8084;
+            const mqttUser = botId;
+            const mqttPassword = "sinno";
+            const clientID = "web-client-" + botId + "-" + Math.random().toString(16).substr(2, 4);
+            const topicPub = `${botId}/status`;
+
+            mqttClient = new Paho.MQTT.Client(brokerHost, brokerPort, "/mqtt", clientID);
+            mqttClient.onConnectionLost = onConnectionLost;
+            mqttClient.onMessageArrived = onMessageArrived;
+
+            const connectOptions = {
+                useSSL: true,
+                timeout: 5,
+                userName: mqttUser,
+                password: mqttPassword,
+                onSuccess: () => {
+                    document.getElementById('statusText').innerText = `Đã kết nối (${botId})`;
+                    document.getElementById('statusDot').classList.add('connected');
+                    document.getElementById('btnConnect').classList.add('d-none');
+                    document.getElementById('btnDisconnect').classList.remove('d-none');
+                    document.getElementById('btnConnect').disabled = false;
+                    document.getElementById('botIdInput').disabled = true;
+
+                    mqttClient.subscribe(topicPub);
+                    writeLog(`✅ KẾT NỐI THÀNH CÔNG! Đang lắng nghe kênh nhận phản hồi: ${topicPub}`);
+                },
+                onFailure: (message) => {
+                    writeLog(`❌ LỖI KẾT NỐI: ${message.errorMessage}`);
+                    alert(`Kết nối WSS thất bại: ${message.errorMessage}`);
+                    resetInterface();
+                }
+            };
+            mqttClient.connect(connectOptions);
+        }
+
+        function disconnectMQTT() {
+            if (mqttClient && mqttClient.isConnected()) {
+                mqttClient.disconnect();
+            }
+            resetInterface();
+            writeLog("🛑 Đã chủ động ngắt đường kết nối kết nối MQTT.");
+        }
+
+        function onConnectionLost(responseObject) {
+            if (responseObject.errorCode !== 0) {
+                writeLog(`⚠️ ĐƯỜNG TRUYỀN BỊ NGẮT: ${responseObject.errorMessage}`);
+                resetInterface();
+            }
+        }
+
+        function onMessageArrived(message) {
+            writeLog(`📥 [STATUS RECEIVE] từ kênh [${message.destinationName}]: <span class="text-info">${message.payloadString}</span>`);
+        }
+
+        function resetInterface() {
+            document.getElementById('statusText').innerText = "Chưa kết nối";
+            document.getElementById('statusDot').classList.remove('connected');
+            document.getElementById('btnConnect').classList.remove('d-none');
+            document.getElementById('btnDisconnect').classList.add('d-none');
+            document.getElementById('botIdInput').disabled = false;
+        }
+        // 💡 THÊM MỚI: Hàm đóng/mở thanh Sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebarMenu');
+            const toggleBtn = document.getElementById('btnToggleSidebar');
+            
+            if (sidebar) {
+                sidebar.classList.toggle('collapsed');
+                
+                // Đổi icon trên nút bấm để tăng trải nghiệm người dùng
+                if (sidebar.classList.contains('collapsed')) {
+                    toggleBtn.innerHTML = '<i class="fa-solid fa-arrow-right-to-line"></i>';
+                    writeLog("[UI] Đã thu gọn thanh điều hướng bên trái.");
+                } else {
+                    toggleBtn.innerHTML = '<i class="fa-solid fa-bars"></i>';
+                    writeLog("[UI] Đã mở rộng thanh điều hướng bên trái.");
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

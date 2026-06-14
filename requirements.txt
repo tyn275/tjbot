@@ -3,3 +3,5 @@ python-dotenv==1.0.1
 psutil
 gpiozero
 rpi-lgpio
+bleak
+bluezero
