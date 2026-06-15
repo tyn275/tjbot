@@ -123,6 +123,12 @@
         speaker-test -c2 -t wav
         ```
 
+    10. Cài đặt môi trường Microphone trên Pi:
+
+        ```shell
+        sudo apt-get install -y portaudio19-dev python3-pyaudio
+        ```
+
 5. Kết nối **Rasberry Pi** với module **usb2serial** theo qui tắc noối dây: 
     ![alt text](images/Pi4-usb2serial.png)
     ![alt text](images/Pi4-usb2serial.real.png)

@@ -400,6 +400,22 @@
                         document.getElementById('col-audio-speaker').innerHTML = `<div class="alert alert-danger">Lỗi kết nối file blockaudio.html</div>`;
                     });
             }
+
+            if (!document.getElementById('micSystemLoaded')) {
+                fetch('blockmic.html')
+                    .then(response => response.text())
+                    .then(html => {
+                        const container = document.getElementById('col-mic-input'); 
+                        if(container) {
+                            container.innerHTML = '<div id="micSystemLoaded"></div>' + html;
+                            container.querySelectorAll('script').forEach(oldScript => {
+                                const newScript = document.createElement('script');
+                                newScript.text = oldScript.text;
+                                document.body.appendChild(newScript).parentNode.removeChild(newScript);
+                            });
+                        }
+                    }).catch(err => { console.error("Lỗi nạp blockmic.html:", err); });
+            }
         }
 
         // --- HÀM NẠP WIFI (CẢI TIẾN CÔ LẬP SCRIPT) ---

@@ -7,3 +7,5 @@ bleak
 bluezero
 gtts
 pygame
+pyaudio
+speechrecognition
