@@ -129,6 +129,15 @@
         sudo apt-get install -y portaudio19-dev python3-pyaudio
         ```
 
+    11.Cài đặt môi trường bắt buộc cho cho camera:
+
+        ```shell
+        sudo apt-get install -y ffmpeg v4l-utils
+        # 2. Kiểm tra xem Pi đã nhận phần cứng Camera chưa (Sẽ thấy danh sách dòng /dev/video0 hiện ra)
+        ls /dev/video*
+        ```
+
+
 5. Kết nối **Rasberry Pi** với module **usb2serial** theo qui tắc noối dây: 
     ![alt text](images/Pi4-usb2serial.png)
     ![alt text](images/Pi4-usb2serial.real.png)

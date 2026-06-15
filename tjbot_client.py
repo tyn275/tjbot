@@ -14,6 +14,7 @@ from features import led_feature
 from features import arm_feature
 from features import audio_feature
 from features import mic_feature
+from features import cam_feature
 
 # --- TẢI CẤU HÌNH TỪ FILE .ENV ---
 load_dotenv()
@@ -37,6 +38,7 @@ led_feature.register(ACTIONS_MAP)
 arm_feature.register(ACTIONS_MAP)
 audio_feature.register(ACTIONS_MAP)
 mic_feature.register(ACTIONS_MAP)
+cam_feature.register(ACTIONS_MAP)
 
 # =====================================================================
 # CÁC HÀM TRÍCH XUẤT THÔNG TIN HỆ THỐNG & MẠNG (Giữ nguyên)

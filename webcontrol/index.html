@@ -264,6 +264,12 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="col-md-6" id="col-camera-system">
+                            <div class="text-center p-4 text-muted bg-white rounded border">
+                                <i class="fa-solid fa-spinner fa-spin me-2"></i> Đang nạp hệ thống camera...
+                            </div>
+                        </div>                        
                     </div>
                 </div>
 
@@ -415,6 +421,22 @@
                             });
                         }
                     }).catch(err => { console.error("Lỗi nạp blockmic.html:", err); });
+            }
+
+            if (!document.getElementById('cameraSystemLoaded')) {
+                fetch('blockcam.html')
+                    .then(response => response.text())
+                    .then(html => {
+                        const container = document.getElementById('col-camera-system'); // Đổi theo ID cột chứa Camera của bạn
+                        if(container) {
+                            container.innerHTML = '<div id="cameraSystemLoaded"></div>' + html;
+                            container.querySelectorAll('script').forEach(oldScript => {
+                                const newScript = document.createElement('script');
+                                newScript.text = oldScript.text;
+                                document.body.appendChild(newScript).parentNode.removeChild(newScript);
+                            });
+                        }
+                    }).catch(err => { console.error("Lỗi nạp blockcam.html:", err); });
             }
         }
 

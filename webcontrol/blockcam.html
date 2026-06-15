@@ -1,0 +1,245 @@
+<div class="card p-4 shadow-sm border-0 bg-white h-100">
+    <div class="d-flex align-items-center mb-3">
+        <div class="p-2 rounded me-3" style="background-color: #f3f0ff; color: #748ffc;">
+            <i class="fa-solid fa-camera fa-2x"></i>
+        </div>
+        <div>
+            <h5 class="fw-bold text-dark mb-0">HỆ THỐNG THI GIÁC (CAMERA)</h5>
+            <small class="text-muted">Đẩy luồng RTSP từ Pi lên Server và nhận luồng HLS về giao diện Web</small>
+        </div>
+    </div>
+
+    <div class="w-100 mb-3 text-center">
+        <div class="p-2 bg-dark rounded border position-relative" style="min-height: 220px; background: #0f1418;">
+            
+            <video id="videoPlayer" class="w-100 rounded" style="max-height: 240px; object-fit: contain; background: #000;" controls autoplay playsinline muted></video>
+            
+            <div id="videoPlaceholder" class="position-absolute top-50 start-50 translate-middle text-center w-100">
+                <div class="camera-lens-ui mx-auto" id="lensCamera">
+                    <div class="lens-core">
+                        <i class="fa-solid fa-eye-slash" id="iconEye" style="font-size: 1.6rem; color: #718093;"></i>
+                    </div>
+                </div>
+                <div class="mt-2 text-muted" style="font-size: 1.8rem; line-height: 1;">
+                    <i class="fa-solid fa-eye text-secondary"></i>
+                </div>
+            </div>
+
+            <div id="badgeLive" class="position-absolute top-0 end-0 m-3 badge bg-secondary px-2 py-1 small" style="font-size: 0.65rem; z-index: 5;">OFFLINE</div>
+        </div>
+    </div>
+
+    <div class="w-100">
+        <div class="bg-light p-3 rounded border">
+            <div class="row g-2">
+                <div class="col-md-3 col-4">
+                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Độ phân giải:</label>
+                    <select id="selResolution" class="form-select form-select-sm" style="font-size: 0.78rem;">
+                        <option value="640x480" selected>640x480</option>
+                        <option value="1280x720">1280x720</option>
+                    </select>
+                </div>
+
+                <div class="col-md-9 col-8 mb-1">
+                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">1. Địa chỉ Pi đẩy luồng đi (RTSP Push URL):</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white" style="font-size: 0.7rem;"><i class="fa-solid fa-upload text-warning"></i></span>
+                        <input type="text" id="txtStreamUrl" class="form-control" value="rtsp://media.toolhub.app/tjbot1/eye" style="font-size: 0.75rem; font-family: monospace;">
+                    </div>
+                </div>
+
+                <div class="col-12 mb-2">
+                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">2. Địa chỉ Web kéo luồng về (HLS M3U8 Player URL):</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white" style="font-size: 0.7rem;"><i class="fa-solid fa-download text-info"></i></span>
+                        <input type="text" id="txtVideoPlayerUrl" class="form-control" value="https://media.toolhub.app/tjbot1/video.m3u8" style="font-size: 0.75rem; font-family: monospace;">
+                        <button class="btn btn-outline-secondary fw-bold" style="font-size: 0.7rem;" onclick="saveAndPublishVideoStream()">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Lưu & Đồng bộ
+                        </button>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button class="btn btn-indigo btn-sm fw-bold w-100 text-white" style="font-size: 0.8rem; background-color: #5c7cfa;" onclick="triggerCamera(true)">
+                                <i class="fa-solid fa-video me-1"></i> Bật Camera hệ thống
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-secondary btn-sm fw-bold w-100" style="font-size: 0.8rem;" onclick="triggerCamera(false)">
+                                <i class="fa-solid fa-video-slash me-1"></i> Tắt Camera hệ thống
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-muted mt-2 small d-block text-truncate" style="max-width: 100%; font-size: 0.65rem;">
+            Chuỗi lệnh MQTT: <span id="lblCamCommandLog" class="text-indigo fw-bold" style="color: #5c7cfa;">Đang đợi...</span>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<style>
+    .camera-lens-ui {
+        width: 75px; height: 75px;
+        background: #2f3640; border: 4px solid #487eb0; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 0 15px rgba(0,0,0,0.5); transition: all 0.4s ease;
+    }
+    .lens-core {
+        width: 45px; height: 45px; background: #111; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        border: 2px solid #718093;
+    }
+
+    /* Hiệu ứng xoay quét la-ban radar khi camera đang kết nối */
+    .lens-streaming { 
+        border-color: #748ffc !important;
+        animation: lensRadarScan 1.5s infinite linear; 
+    }
+    @keyframes lensRadarScan {
+        0%   { box-shadow: 0 0 0 0 rgba(116, 143, 252, 0.4); }
+        50%  { box-shadow: 0 0 0 10px rgba(116, 143, 252, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(116, 143, 252, 0); }
+    }
+</style>
+
+<script>
+    let hlsInstance = null;
+
+    function checkMqttConnection() {
+        if (typeof mqttClient !== "undefined" && mqttClient && typeof mqttClient.isConnected === "function") {
+            return mqttClient.isConnected();
+        }
+        return false;
+    }
+
+    // Hàm thực hiện lưu trữ cục bộ và đồng bộ cấu hình VideoStream qua MQTT
+    window.saveAndPublishVideoStream = function() {
+        if (!checkMqttConnection()) {
+            alert("⚠️ Lỗi: Chưa kết nối MQTT! Không thể đồng bộ cấu hình luồng VideoStream.");
+            return;
+        }
+        const playerUrl = document.getElementById('txtVideoPlayerUrl').value.trim();
+        if (!playerUrl) { alert("Không được bỏ trống URL luồng kéo!"); return; }
+
+        // Phát lệnh MQTT báo cho Server điều phối luồng
+        const cmdVideo = `SetVideoStream("${playerUrl}")`;
+        document.getElementById('lblCamCommandLog').innerHTML = `Lệnh gửi: <span style="color:#5c7cfa;">${cmdVideo}</span>`;
+        if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmdVideo);
+        
+        alert("💾 Đã lưu cấu hình và đồng bộ SetVideoStream thành công!");
+    };
+
+    window.triggerCamera = function(status) {
+        if (!checkMqttConnection()) {
+            alert("⚠️ Lỗi: Chưa kết nối MQTT Server!");
+            return;
+        }
+
+        const lens = document.getElementById('lensCamera');
+        const badge = document.getElementById('badgeLive');
+        const log = document.getElementById('lblCamCommandLog');
+        const placeholder = document.getElementById('videoPlaceholder');
+        const video = document.getElementById('videoPlayer');
+        
+        const pushServerUrl = document.getElementById('txtStreamUrl').value.trim();
+        const pullPlayerUrl = document.getElementById('txtVideoPlayerUrl').value.trim();
+        const resolution = document.getElementById('selResolution').value;
+
+        if (status) {
+            // Bước 1: Hạ lệnh bắt Pi đẩy RTSP lên Server trung gian
+            const cmdPush = `SetStreamingServer("${pushServerUrl}")`;
+            if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmdPush);
+
+            setTimeout(() => {
+                // Bước 2: Hạ lệnh bật phần cứng Camera
+                const cmdStart = `Camera("on", "${resolution}")`;
+                log.innerHTML = `Lệnh: <span style="color:#5c7cfa;">${cmdPush}</span> & <span style="color:#5c7cfa;">${cmdStart}</span>`;
+                if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmdStart);
+                
+                // Cấu hình giao diện UI LIVE
+                if(lens) lens.classList.add('lens-streaming');
+                if(badge) {
+                    badge.innerText = "● LIVE STREAM";
+                    badge.className = "position-absolute top-0 end-0 m-3 badge bg-danger px-2 py-1 small";
+                }
+                if(placeholder) placeholder.classList.add('d-none'); // Ẩn hình con mắt cute đi để nhường chỗ cho video
+
+                // Bước 3: Khởi động bộ giải mã kéo luồng HLS m3u8 về Video Player
+                startHlsPlayer(pullPlayerUrl, video);
+
+            }, 150);
+
+        } else {
+            // Lệnh tắt camera gửi xuống Pi
+            const cmdStop = `Camera("off")`;
+            log.innerHTML = `Lệnh gửi: <span class="text-secondary">${cmdStop}</span>`;
+            if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmdStop);
+            
+            // Dừng luồng và khôi phục giao diện con mắt cute ban đầu
+            stopHlsPlayer(video);
+            if(lens) lens.classList.remove('lens-streaming');
+            if(placeholder) placeholder.classList.remove('d-none');
+            if(badge) {
+                badge.innerText = "OFFLINE";
+                badge.className = "position-absolute top-0 end-0 m-3 badge bg-secondary px-2 py-1 small";
+            }
+        }
+    };
+
+    function startHlsPlayer(streamUrl, videoElement) {
+        stopHlsPlayer(videoElement); // Reset luồng cũ nếu có
+        
+        if (Hls.isSupported()) {
+            hlsInstance = new Hls({
+                manifestLoadingMaxRetry: 10,
+                manifestLoadingRetryDelay: 1000
+            });
+            hlsInstance.loadSource(streamUrl);
+            hlsInstance.attachMedia(videoElement);
+            hlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
+                videoElement.play().catch(e => console.log("Chờ người dùng tương tác để tự phát video:", e));
+            });
+            
+            // Bắt lỗi nếu luồng m3u8 chưa kịp sinh ra trên MediaMTX khi Pi vừa bật cam
+            hlsInstance.on(Hls.Events.ERROR, function (event, data) {
+                if (data.fatal) {
+                    switch (data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            console.log("Đang thử kết nối lại luồng video...");
+                            hlsInstance.startLoad();
+                            break;
+                        default:
+                            stopHlsPlayer(videoElement);
+                            break;
+                    }
+                }
+            });
+        } 
+        // Hỗ trợ trực tiếp cho trình duyệt Safari/iOS không cần thư viện phụ trợ
+        else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+            videoElement.src = streamUrl;
+            videoElement.addEventListener('loadedmetadata', function() {
+                videoElement.play();
+            });
+        }
+    }
+
+    function stopHlsPlayer(videoElement) {
+        if (hlsInstance) {
+            hlsInstance.destroy();
+            hlsInstance = null;
+        }
+        if (videoElement) {
+            videoElement.pause();
+            videoElement.removeAttribute('src');
+            videoElement.load();
+        }
+    }
+</script>
