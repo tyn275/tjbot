@@ -1,4 +1,9 @@
 # features/arm_feature.py
+import os
+# Ép thư viện gpiozero sử dụng pigpio làm nền tảng tạo xung phần cứng
+os.environ['GPIOZERO_PIN_FACTORY'] = 'pigpio'
+
+# Sau đó mới import các thư viện cũ
 import time
 from gpiozero import AngularServo
 
@@ -14,8 +19,10 @@ try:
         min_angle=-90, 
         max_angle=90, 
         min_pulse_width=0.00045, 
-        max_pulse_width=0.00245
-    )
+        max_pulse_width=0.00245,
+        initial_angle=None
+    );
+    servo.detach()
     print("-> [HỆ THỐNG] Đã hiệu chuẩn Driver: Mở rộng hành trình Servo lên 180 độ.")
 except Exception as e:
     print(f"-> [CẢNH BÁO SERVO]: Không thể khởi tạo Servo ({e})")
