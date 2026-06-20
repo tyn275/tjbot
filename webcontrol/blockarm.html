@@ -27,15 +27,34 @@
         80%  { transform: rotate(8deg); }
         100% { transform: rotate(0deg); }
     }
+
+    /* Tùy chỉnh màu sắc riêng cho nút Trạng thái Cơ bắp */
+    .btn-check:checked + .btn-outline-danger {
+        background-color: #dc3545;
+        color: #fff;
+    }
 </style>
 <div class="card p-4 shadow-sm border-0 bg-white h-100">
-    <div class="d-flex align-items-center mb-3">
-        <div class="p-2 rounded me-3" style="background-color: #fff9db; color: #f59f00;">
-            <i class="fa-solid fa-robot fa-2x"></i>
+    <div class="d-flex align-items-center mb-3 flex-wrap gap-3">
+        <div class="d-flex align-items-center">
+            <div class="p-2 rounded me-3" style="background-color: #fff9db; color: #f59f00;">
+                <i class="fa-solid fa-robot fa-2x"></i>
+            </div>
+            <div>
+                <h5 class="fw-bold text-dark mb-0">CÁNH TAY ROBOT (ARM CONTROLLER)</h5>
+                <small class="text-muted">Cấu hình góc quay vật lý và kịch bản cử động</small>
+            </div>
         </div>
-        <div>
-            <h5 class="fw-bold text-dark mb-0">CÁNH TAY ROBOT (ARM CONTROLLER)</h5>
-            <small class="text-muted">Cấu hình góc quay vật lý và kịch bản cử động</small>
+        
+        <div class="ms-auto d-flex align-items-center gap-2">
+            <span class="small fw-bold text-secondary"><i class="fa-solid fa-dumbbell"></i> Trạng thái:</span>
+            <div class="btn-group border rounded p-1 bg-light" role="group" aria-label="Arm Muscle Control">
+                <input type="radio" class="btn-check" name="muscleState" id="radMuscleOn" autocomplete="off" checked onchange="toggleMuscle('on')">
+                <label class="btn btn-sm btn-outline-success fw-bold px-3 border-0 rounded" for="radMuscleOn">Cơ bắp</label>
+
+                <input type="radio" class="btn-check" name="muscleState" id="radMuscleOff" autocomplete="off" onchange="toggleMuscle('off')">
+                <label class="btn btn-sm btn-outline-danger fw-bold px-3 border-0 rounded" for="radMuscleOff">Nghỉ ngơi</label>
+            </div>
         </div>
     </div>
     
@@ -113,7 +132,7 @@
 </div>
 
 <script>
-    console.log("🦾 Khối Cánh Tay Robot bán nguyệt đã được sửa lỗi hiển thị chập chờn!");
+    console.log("🦾 Khối Cánh Tay Robot bán nguyệt đã được sửa lỗi hiển thị chập chờn và tích hợp nút Muscle!");
 
     const canvas = document.getElementById('armCanvas');
     const ctx = canvas.getContext('2d');
@@ -124,9 +143,19 @@
     let currentAngle = 0; // Góc mặc định (0 độ - phương ngang bên phải)
     let isDragging = false;
 
+    // 🔥 LOGIC KHỞI TẠO HOẶC ĐIỀU KHIỂN TOGGLE CƠ BẮP (MUSCLE)
+    function toggleMuscle(state) {
+        if (state === 'on') {
+            sendMQTTCommand("Muscle(on)");
+            // Khi bật lại cơ bắp, cho phép tương tác với các nút điều khiển cánh tay
+            btnExecute.disabled = chkFollowMe.checked;
+        } else if (state === 'off') {
+            sendMQTTCommand("Muscle(off)");
+        }
+    }
+
     // --- HÀM VẼ CÁNH TAY TRÊN CANVAS NỬA HÌNH TRÒN ---
     function drawArm(angleDegrees) {
-        // Kiểm tra an toàn bộ ngữ cảnh đồ họa Canvas
         if (!ctx || !canvas || canvas.width === 0 || canvas.height === 0) return;
 
         const cx = canvas.width / 2;
@@ -134,43 +163,36 @@
         
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 1. Chỉ vẽ NỬA vòng tròn định hướng nét đứt (Cung từ -90° đến 90° nằm bên phải)
         ctx.beginPath();
         ctx.arc(cx, cy, 45, Math.PI * 1.5, Math.PI * 0.5, false);
         ctx.strokeStyle = '#e0e0e0';
         ctx.lineWidth = 2;
         ctx.setLineDash([4, 4]);
         ctx.stroke();
-        ctx.setLineDash([]); // Reset nét đứt
+        ctx.setLineDash([]); 
 
-        // Đường trục đứng chặn nửa hình tròn để rõ cấu trúc bán nguyệt
         ctx.beginPath();
         ctx.moveTo(cx, cy - 45);
         ctx.lineTo(cx, cy + 45);
         ctx.strokeStyle = '#f0f0f0';
         ctx.stroke();
 
-        // 2. Chuyển đổi góc
         const angleRadians = angleDegrees * (Math.PI / 180);
 
-        // 3. Vẽ cánh tay hình chữ nhật
         ctx.save();
         ctx.translate(cx, cy);      
         ctx.rotate(angleRadians);   
 
-        // Khớp tròn tâm
         ctx.beginPath();
         ctx.arc(0, 0, 6, 0, 2 * Math.PI);
         ctx.fillStyle = '#333';
         ctx.fill();
 
-        // 💡 CẢI TIẾN THÊM: Vẽ bo góc hình chữ nhật thủ công bằng đường Path 
-        // để phòng trừ một số phiên bản trình duyệt cũ lỗi hàm ctx.roundRect()
-        const w = 45;  // Chiều dài cánh tay
-        const h = 12;  // Chiều rộng cánh tay
-        const r = 3;   // Bán kính bo góc
+        const w = 45;  
+        const h = 12;  
+        const r = 3;   
         const x = 0;
-        const y = -6;  // Cân bằng tâm trục giữa
+        const y = -6;  
 
         ctx.beginPath();
         ctx.moveTo(x + r, y);
@@ -192,7 +214,6 @@
         ctx.restore();
     }
 
-    // --- TÍNH TOÁN GÓC MỚI THEO TRỤC ĐÃ ĐẢO ---
     function calculateAngleFromMouse(e) {
         const rect = canvas.getBoundingClientRect();
         const mouseX = e.clientX - rect.left;
@@ -215,6 +236,8 @@
         drawArm(currentAngle);
 
         if (chkFollowMe.checked) {
+            // Tự động gạt toggle sang "Cơ bắp" trên giao diện vì đang có lệnh gồng di chuyển
+            document.getElementById('radMuscleOn').checked = true;
             sendMQTTCommand(`Arm(${currentAngle})`);
         }
     }
@@ -252,6 +275,7 @@
     chkFollowMe.addEventListener('change', function() {
         if (this.checked) {
             btnExecute.disabled = true; 
+            document.getElementById('radMuscleOn').checked = true; // Ép bật cơ bắp
             sendMQTTCommand(`Arm(${currentAngle})`);
         } else {
             btnExecute.disabled = false; 
@@ -259,6 +283,7 @@
     });
 
     function sendSingleArmAngle() {
+        document.getElementById('radMuscleOn').checked = true; // Ép bật cơ bắp để nhận lệnh di chuyển
         sendMQTTCommand(`Arm(${currentAngle})`);
     }
 
@@ -266,20 +291,17 @@
         const times = document.getElementById('waveTimes').value || 1;
         const speed = document.getElementById('waveSpeed').value;
         
+        document.getElementById('radMuscleOn').checked = true; // Ép bật cơ bắp
         const command = `Wavehand(${speed}, ${times})`;
         document.getElementById('lblArmCommandLog').innerText = `Lệnh xuất: ${command}`;
         
         sendMQTTCommand(command);
     }
 
-    // 💡 GIẢI PHÁP ĐÓNG ĐINH LỖI HIỂN THỊ:
-    // Vẽ ngay lập tức lần 1, đồng thời đặt lịch vẽ lại sau 50ms và 300ms 
-    // để sửa sai nếu trình duyệt tải chậm layout hoặc file nhúng HTML (Web component).
     drawArm(currentAngle);
     setTimeout(() => { drawArm(currentAngle); }, 50);
     setTimeout(() => { drawArm(currentAngle); }, 300);
 
-    // Kỹ thuật tối hậu: Tự động vẽ lại nếu kích thước phần tử Canvas thay đổi trên màn hình
     if (window.ResizeObserver) {
         const resizeObserver = new ResizeObserver(() => {
             drawArm(currentAngle);
