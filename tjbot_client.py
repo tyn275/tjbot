@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from paho.mqtt import client as mqtt_client
 import psutil  
 from paho.mqtt.subscribeoptions import SubscribeOptions
+import threading           # Đảm bảo đã có
+import RPi.GPIO as GPIO    # <-- THÊM DÒNG NÀY (Bỏ từ gpiozero import Button nếu có)
 
 # 📦 IMPORT CÁC TÍNH NĂNG PHẦN CỨNG TỪ THƯ MỤC FEATURES
 from features import led_feature
@@ -19,13 +21,15 @@ from features import cam_feature
 # --- TẢI CẤU HÌNH TỪ FILE .ENV ---
 load_dotenv()
 
+BOT_ID = os.getenv('BOT_ID', 'tjbot0').strip()
+
 BROKER = os.getenv('MQTT_BROKER', 'mqtt.toolhub.app').strip()
 PORT = int(os.getenv('MQTT_PORT', 1883))
 USER = os.getenv('MQTT_USER').strip() if os.getenv('MQTT_USER') else None
 PASSWORD = os.getenv('MQTT_PASSWORD').strip() if os.getenv('MQTT_PASSWORD') else None
 
-TOPIC_SUB = os.getenv('MQTT_TOPIC_SUB', 'tjbot0').strip()+'/commands'
-TOPIC_PUB = os.getenv('MQTT_TOPIC_PUB', 'tjbot0').strip()+'/status'
+TOPIC_SUB = BOT_ID+"/"+os.getenv('MQTT_TOPIC_SUB', 'commands').strip()
+TOPIC_PUB = BOT_ID+"/"+os.getenv('MQTT_TOPIC_PUB', 'status').strip()
 CLIENT_ID = os.getenv('MQTT_CLIENT_ID', 'raspberry-pi-tjbot1').strip()
 
 # =====================================================================
@@ -75,7 +79,9 @@ def send_startup_report(client):
     report_msg = (
         f"== [TJBOT STARTUP REPORT] ==\n - Trạng thái: Startup\n"
         f" - Chi tiết danh sách Card mạng:\n{network_details}\n"
-        f" - Tên WiFi (SSID): {ssid}\n - Địa chỉ IP Public: {public_ip}\n============================="
+        f" - Tên WiFi (SSID): {ssid}\n - Địa chỉ IP Public: {public_ip}\n"
+        f" - MQTT Topic sub: {TOPIC_SUB}, pub: {TOPIC_PUB}\n"
+        f"=================================---=="
     )
     print(report_msg)
     client.publish(TOPIC_PUB, report_msg, retain=True)
@@ -155,10 +161,80 @@ def on_message(client, userdata, msg):
         print(f"-> [LỖI HỆ THỐNG]: {e}")
         client.publish(TOPIC_SUB, "ERR")
 
+# =====================================================================
+# QUẢN LÝ CHẾ ĐỘ HOẠT ĐỘNG (MODES) QUA NÚT CỨNG GPIO26
+# =====================================================================
+CURRENT_MODE = "NORMAL"  # Các mode có thể có: "NORMAL", "LEARNING", "STANDBY",...
+BUTTON_PIN = 26          # Chân GPIO26 (Pin 37) theo sơ đồ thực tế của bạn
+
+# =====================================================================
+# CẤU HÌNH NÚT BẤM ĐA NĂNG - GPIO26 (PIN 37) CÓ PULL-UP
+# =====================================================================
+CURRENT_MODE = "NORMAL"
+BUTTON_PIN = 26  # Chân GPIO26 ứng với Pin 37 theo sơ đồ phần cứng
+
+def watch_hardware_button():
+    global CURRENT_MODE
+    
+    # 1. Khởi tạo chế độ đánh số chân BCM
+    GPIO.setmode(GPIO.BCM)
+    
+    # 2. 🔥 ĐÂY CHÍNH LÀ DÒNG CẤU HÌNH PULL UP QUAN TRỌNG:
+    # Ép chân GPIO26 luôn ở mức CAO (3.3V) bằng điện trở treo nội của Pi.
+    GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    
+    print(f"🔘 [HỆ THỐNG] Đã kích hoạt GPIO{BUTTON_PIN} với chế độ PULL-UP thành công.", flush=True)
+
+    def button_worker():
+        global CURRENT_MODE
+        while True:
+            # Khi nút được nhấn (đầu kia nối GND), chân GPIO26 sẽ bị kéo về LOW (0)
+            if GPIO.input(BUTTON_PIN) == GPIO.LOW:
+                start_press_time = time.time()
+                
+                # Chờ người dùng nhả tay ra để tính thời gian nhấn giữ
+                while GPIO.input(BUTTON_PIN) == GPIO.LOW:
+                    time.sleep(0.05)
+                
+                press_duration = time.time() - start_press_time
+                
+                # CHẾ ĐỘ 1: Nhấn GIỮ lâu hơn 1.5 giây -> Chạy Selftest
+                if press_duration >= 1.5:
+                    print("\n🚨 [NÚT CỨNG]: Nhấn GIỮ (>1.5s) -> Khởi chạy Selftest...", flush=True)
+                    try:
+                        subprocess.run(["/usr/bin/python3", "/home/pi/tjbot_mqtt/selftest.py"], timeout=30)
+                    except Exception as e:
+                        print(f"❌ Lỗi chạy Selftest từ nút bấm: {e}", flush=True)
+                        
+                # CHẾ ĐỘ 2: Nhấn THẢ nhanh (< 1.5 giây) -> Chuyển đổi các Mode hoạt động khác
+                elif press_duration > 0.1: # Chống nhiễu rung tiếp điểm cơ khí
+                    if CURRENT_MODE == "NORMAL":
+                        CURRENT_MODE = "LEARNING"
+                        print("\n🔄 [NÚT CỨNG]: Nhấn NHANH -> Đổi Mode sang: 🎓 LEARNING", flush=True)
+                    elif CURRENT_MODE == "LEARNING":
+                        CURRENT_MODE = "STANDBY"
+                        print("\n🔄 [NÚT CỨNG]: Nhấn NHANH -> Đổi Mode sang: 😴 STANDBY", flush=True)
+                    else:
+                        CURRENT_MODE = "NORMAL"
+                        print("\n🔄 [NÚT CỨNG]: Nhấn NHANH -> Quay về Mode: 🤖 NORMAL", flush=True)
+                        
+            time.sleep(0.1) # Tránh ăn tối đa CPU của Pi
+
+    # Tách luồng quét nút bấm độc lập, chạy song song với vòng lặp MQTT chính
+    t = threading.Thread(target=button_worker, daemon=True)
+    t.start()
+    
 def run():
+    # 1. Kích hoạt nút bấm đa năng chạy ngầm trước
+    try:
+        watch_hardware_button()
+    except Exception as e:
+        print(f"⚠️ Không thể bật nút bấm: {e}", flush=True)
+
+    # 2. Kết nối và duy trì MQTT vĩnh viễn
     client = connect_mqtt()
     client.on_message = on_message
-    client.loop_forever() 
-
+    client.loop_forever()
+    
 if __name__ == '__main__':
     run()
