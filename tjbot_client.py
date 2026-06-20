@@ -24,8 +24,8 @@ PORT = int(os.getenv('MQTT_PORT', 1883))
 USER = os.getenv('MQTT_USER').strip() if os.getenv('MQTT_USER') else None
 PASSWORD = os.getenv('MQTT_PASSWORD').strip() if os.getenv('MQTT_PASSWORD') else None
 
-TOPIC_SUB = os.getenv('MQTT_TOPIC_SUB', 'tjbot1/commands').strip()
-TOPIC_PUB = os.getenv('MQTT_TOPIC_PUB', 'tjbot1/status').strip()
+TOPIC_SUB = os.getenv('MQTT_TOPIC_SUB', 'tjbot0').strip()+'/commands'
+TOPIC_PUB = os.getenv('MQTT_TOPIC_PUB', 'tjbot0').strip()+'/status'
 CLIENT_ID = os.getenv('MQTT_CLIENT_ID', 'raspberry-pi-tjbot1').strip()
 
 # =====================================================================
