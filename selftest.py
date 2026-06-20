@@ -5,6 +5,7 @@ import time
 # 📦 Import các tính năng cần được kiểm tra
 from features import led_feature
 from features import arm_feature
+from features import audio_feature
 
 def run_selftest():
     """Hàm tổng quản lý, lần lượt kích hoạt selftest của các tính năng"""
@@ -16,7 +17,8 @@ def run_selftest():
     # Danh sách các mô-đun tính năng đăng ký tham gia kiểm tra
     features_to_test = {
         "Hệ thống Đèn LED": led_feature,
-        "Cơ cấu Cánh tay & Servo": arm_feature
+        "Cơ cấu Cánh tay & Servo": arm_feature,
+        "Âm thanh": audio_feature
     }
 
     results = {}
