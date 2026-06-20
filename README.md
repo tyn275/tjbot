@@ -38,7 +38,7 @@
 4. **Cấu hình kích hoạt UART khi khởi động**:
     1. Xem thẻ nhớ với phân vùng **bootfs** trên máy tính cá nhân
     2. Tìm file có tên là **config.txt** và mở nó bằng một trình soạn thảo văn bản (như Notepad)
-    3. Kéo xuống dưới cùng và thêm các dòng sau vào. 
+    3. Kéo xuống dưới cùng và thêm các dòng sau vào. ([Xem file minh họa](./osconfig/pi4_bookworm/config.txt))
         - Mục đích là để kích hoạt chức năng UART trên các chân GPIO
 
             ```plain
@@ -69,7 +69,8 @@
 
     4. Nếu muốn dùng Usb Type C để truyền UART thì còn 2 bước thực hiện sau đây, nếu không muốn thì bỏ qua bước 4,5,6 .\
     Tìm file có tên là **cmdline.txt** và mở nó bằng một trình soạn thảo văn bản (như Notepad).\
-    Tìm tới đoạn cấu hình `rootwait` và chèn vào sau lệnh `modules-load=dwc2,g_serial`.
+    Tìm tới đoạn cấu hình `rootwait` và chèn vào sau lệnh `modules-load=dwc2,g_serial`.\
+    ([Xem file minh họa](./osconfig/pi4_bookworm/cmdline.txt))
     5. Lưu file lại, an toàn rút thẻ nhớ ra và cắm lại vào Raspberry Pi 4.
     6. Và tiếp theo là chạy service phục vụ ở cổng UART đó.
 
@@ -175,7 +176,7 @@ Led RGB 10mm Cathod chung
     sudo apt install python3-pip -y
     sudo apt install -y libcairo2-dev libgirepository1.0-dev greybird-gtk-theme pkg-config python3-dev
     sudo systemctl enable pigpiod && sudo systemctl start pigpiod
-    sudo apt install pigpio -y
+    sudo apt install pigpio flac -y
     pip install -r requirements.txt --break-system-packages    
     ```
 
