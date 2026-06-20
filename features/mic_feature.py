@@ -3,7 +3,9 @@ import os
 import time
 import wave
 import threading
-from paho.mqtt import client as mqtt_client
+
+# 🔥 ĐÃ ĐỔI: Import hàm gửi tin nhắn tập trung từ module mqtt dùng chung
+from features.mqtt import mqtt_response
 
 # Thử import các thư viện xử lý Microphone, báo lỗi nếu thiếu
 try:
@@ -13,87 +15,81 @@ except ImportError:
     print("-> [CẢNH BÁO]: Thiếu thư viện âm thanh. Vui lòng chạy: pip install pyaudio speechrecognition")
 
 # -----------------------------------------------------------------
-# CẤU HÌNH ĐƯỜNG DẪN THƯ MỤC LƯU FILE THU ÂM
+# CẤU HÌNH ĐƯỜNG DẪN THƯ MỤC LƯU FILE THU ÂM (Giữ nguyên)
 # -----------------------------------------------------------------
-# Lưu file ghi âm vào thư mục tạm ../cache/ để phát lại nhại giọng
 CACHE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "cache"))
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-# Biến cờ toàn cục dùng để ngắt trạng thái nghe/ghi âm khẩn cấp khi nhận lệnh "off"
 is_recording = False
 is_listening = False
 
-# -----------------------------------------------------------------
-# CẤU HÌNH MQTT PHỤ ĐỂ BẮN KẾT QUẢ S2T VỀ WEB
-# -----------------------------------------------------------------
-DEVICEID="tjbot1"
-# Lấy các thông số môi trường giống như file mẹ để đồng bộ kết nối
-BROKER = os.getenv('MQTT_BROKER', 'mqtt.toolhub.app').strip()
-PORT = int(os.getenv('MQTT_PORT', 1883))
-USER = os.getenv('MQTT_USER').strip() if os.getenv('MQTT_USER') else None
-PASSWORD = os.getenv('MQTT_PASSWORD').strip() if os.getenv('MQTT_PASSWORD') else None
-TOPIC_RES = DEVICEID+"/res"  # Kênh phản hồi kết quả s2t lên giao diện Web
-
-def publish_s2t_result(text_content):
-    """ Hàm kết nối nhanh tới broker để đẩy chuỗi s2t=... lên kênh phản hồi """
-    try:
-        client = mqtt_client.Client(mqtt_client.CallbackAPIVersion.VERSION2, "tjbot-mic-reporter")
-        if USER and PASSWORD:
-            client.username_pw_set(USER, PASSWORD)
-        client.connect(BROKER, PORT, 60)
-        payload = f"s2t={text_content}"
-        client.publish(TOPIC_RES, payload)
-        print(f"-> [MIC_MQTT]: Đã gửi kết quả nhận diện lên [{TOPIC_RES}]: {payload}")
-        client.disconnect()
-    except Exception as e:
-        print(f"❌ Không thể gửi kết quả MQTT phản hồi: {e}")
+# ❌ ĐÃ XÓA: Toàn bộ cấu hình MQTT phụ và hàm publish_s2t_result cũ tại đây!
 
 # -----------------------------------------------------------------
-# PHẦN 1: HÀM XỬ LÝ "NGHE VÀ NÓI NHẠI" (RECORD)
+# PHẦN 1: HÀM XỬ LÝ "NGHE VÀ NÓI NHẠI" (RECORD) - Giữ nguyên
 # -----------------------------------------------------------------
 def _record_and_playback_worker(timeout_sec):
     global is_recording
     recorded_file = os.path.join(CACHE_DIR, "playback_copy.wav")
     
-    # Cấu hình phần cứng Audio Stream
     CHUNK = 1024
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
-    RATE = 16000 # 16kHz chuẩn giọng nói nhỏ gọn
+    # 🔥 ĐÃ SỬA: Ép đúng tần số 44100Hz tương thích hoàn toàn với phần cứng Microphone USB của bạn
+    RATE = 44100 
+
+    p = None
+    stream = None
 
     try:
         p = pyaudio.PyAudio()
-        stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
-        print(f"🎙️ [RECORD]: Robot đang thu âm giọng nói của bạn trong {timeout_sec} giây...")
+        
+        # 🔥 ĐÃ SỬA: Thêm device_index=1 giống như bên hàm Listen để bốc trúng cổng USB
+        stream = p.open(
+            format=FORMAT, 
+            channels=CHANNELS, 
+            rate=RATE, 
+            input=True, 
+            input_device_index=1, 
+            frames_per_buffer=CHUNK
+        )
+        print(f"🎙️ [RECORD USB]: Khởi tạo phần cứng thành công. Đang thu âm trong {timeout_sec}s...")
         
         frames = []
         start_time = time.time()
         
-        # Vòng lặp đọc dữ liệu từ phần cứng Micro
+        # Vòng lặp thu âm thông minh có bảo vệ chống tràn bộ đệm và chống kẹt luồng
         while is_recording and (time.time() - start_time < timeout_sec):
-            data = stream.read(CHUNK, exception_on_overflow=False)
-            frames.append(data)
+            try:
+                # Thêm exception_on_overflow=False để tránh treo luồng khi Mic USB bị trễ dữ liệu
+                data = stream.read(CHUNK, exception_on_overflow=False)
+                if data:
+                    frames.append(data)
+            except Exception as read_err:
+                print(f"⚠️ Cảnh báo đọc dữ liệu Mic: {read_err}")
+                break
             
-        # Đóng stream thu âm
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
+        if stream:
+            stream.stop_stream()
+            stream.close()
+        if p:
+            p.terminate()
+        print("🔒 [RECORD]: Đã giải phóng hoàn toàn thiết bị Microphone USB.")
 
-        if not is_recording:
-            print("🛑 [RECORD]: Tiến trình bị hủy bỏ bởi người dùng.")
+        if not is_recording or len(frames) == 0:
+            print("🛑 [RECORD]: Tiến trình bị hủy bỏ hoặc không có dữ liệu âm thanh.")
             return
 
-        # Tiến hành ghi mảng dữ liệu âm thanh vừa thu vào file .wav
+        # Ghi file kết quả âm thanh
         wf = wave.open(recorded_file, 'wb')
         wf.setnchannels(CHANNELS)
         wf.setsampwidth(p.get_sample_size(FORMAT))
         wf.setframerate(RATE)
         wf.writeframes(b''.join(frames))
         wf.close()
-        print("💾 [RECORD]: Đã lưu file âm thanh thu được thành công.")
+        print("💾 [RECORD]: Đã lưu file âm thanh thu từ USB thành công.")
 
-        # --- PHÁT LẠI Y HỆT GIỌNG VỪA THU (NÓI NHẠI) ---
-        # Sử dụng pygame.mixer có sẵn trong mô-đun audio để phát lại ngay lập tức
+        # --- PHÁT LẠI GIỌNG NÓI ---
         try:
             import pygame
             if not pygame.mixer.get_init():
@@ -109,13 +105,16 @@ def _record_and_playback_worker(timeout_sec):
 
     except Exception as e:
         print(f"❌ Lỗi phần cứng Micro trong quá trình Record: {e}")
+        # Bắn thông tin lỗi về hệ thống MQTT dùng chung
+        mqtt_response(f"s2t=(Lỗi phần cứng Mic: {str(e)})")
+        try:
+            if stream: stream.close()
+            if p: p.terminate()
+        except: pass
     finally:
         is_recording = False
 
 def mic_record_control(state, timeout="5"):
-    """
-    Xử lý lệnh: Record(on, 5) hoặc Record(off) từ Web gửi xuống.
-    """
     global is_recording
     state = state.strip().lower()
     timeout_sec = int(timeout.strip())
@@ -124,7 +123,6 @@ def mic_record_control(state, timeout="5"):
         if is_recording:
             return "Robot đang trong tiến trình thu âm nhại giọng rồi."
         is_recording = True
-        # Chạy ngầm tiến trình thu âm bằng Thread để không làm treo hệ thống client mẹ
         t = threading.Thread(target=_record_and_playback_worker, args=(timeout_sec,))
         t.daemon = True
         t.start()
@@ -141,20 +139,16 @@ def _listen_and_recognize_worker(timeout_sec):
     global is_listening
     r = sr.Recognizer()
     
-    # Điều chỉnh bộ lọc nhiễu môi trường xung quanh cho microphone phòng thí nghiệm
-    r.energy_threshold = 3000  
+    r.energy_threshold = 300  
     r.dynamic_energy_threshold = True
 
     print(f"🧠 [LISTEN AI]: Hệ thống AI đang tập trung lắng nghe để dịch giọng nói ({timeout_sec}s)...")
     
     try:
-        with sr.Microphone() as source:
-            # Cho phép robot tự điều chỉnh theo tạp âm môi trường trong 0.8 giây đầu
+        # Sử dụng Card mic USB định danh phần cứng index 1 và tần số 44100Hz ổn định
+        with sr.Microphone(device_index=1, sample_rate=44100) as source:
             r.adjust_for_ambient_noise(source, duration=0.8)
-            
             if not is_listening: return
-            
-            # Thực hiện nghe với thời gian giới hạn timeout
             audio_data = r.listen(source, timeout=timeout_sec, phrase_time_limit=timeout_sec)
             
         if not is_listening:
@@ -162,29 +156,25 @@ def _listen_and_recognize_worker(timeout_sec):
             return
 
         print("🤖 [LISTEN AI]: Đang gửi dữ liệu âm thanh lên Cloud AI để xử lý dịch văn bản...")
-        # Sử dụng Google Speech Recognition nhận diện ngôn ngữ Tiếng Việt (vi-VN)
         recognized_text = r.recognize_google(audio_data, language="vi-VN")
         print(f"🎯 [LISTEN AI] Kết quả dịch thành công: \"{recognized_text}\"")
         
-        # 🚀 BẮN PHẢN HỒI KẾT QUẢ VỀ CHO TEXTAREA TRÊN TRANG WEB NHẬN ĐƯỢC
-        publish_s2t_result(recognized_text)
+        # 🔥 ĐÃ ĐỔI: Sử dụng hàm dùng chung để bắn thẳng kết quả dạng s2=... lên TOPIC_PUB
+        mqtt_response(f"s2t={recognized_text}")
 
     except sr.WaitTimeoutError:
         print("⏳ [LISTEN AI]: Hết thời gian chờ mà không thấy ai nói gì.")
-        publish_s2t_result("(Không nghe thấy âm thanh nào từ bạn!)")
+        mqtt_response("s2t=(Không nghe thấy âm thanh nào từ bạn!)")
     except sr.UnknownValueError:
         print("❓ [LISTEN AI]: Google AI không thể hiểu được từ ngữ bạn vừa nói.")
-        publish_s2t_result("(Lỗi: Không nhận diện rõ từ ngữ bạn nói!)")
+        mqtt_response("s2t=(Lỗi: Không nhận diện rõ từ ngữ bạn nói!)")
     except Exception as e:
-        print(f"❌ Lỗi kết nối dịch vụ Google Speech: {e}")
-        publish_s2t_result(f"(Lỗi kết nối AI: {str(e)})")
+        print(f"❌ Lỗi kết nối dịch vụ Google Speech hoặc lỗi phần cứng: {e}")
+        mqtt_response(f"s2t=(Lỗi kết nối AI: {str(e)})")
     finally:
         is_listening = False
 
 def mic_listen_control(state, timeout="5"):
-    """
-    Xử lý lệnh: Listen(on, 5) hoặc Listen(off) từ Web gửi xuống.
-    """
     global is_listening
     state = state.strip().lower()
     timeout_sec = int(timeout.strip())
@@ -193,7 +183,6 @@ def mic_listen_control(state, timeout="5"):
         if is_listening:
             return "Robot đang bận lắng nghe dịch ngôn ngữ rồi."
         is_listening = True
-        # Chạy ngầm tiến trình nhận diện AI bằng Thread riêng biệt
         t = threading.Thread(target=_listen_and_recognize_worker, args=(timeout_sec,))
         t.daemon = True
         t.start()
@@ -206,7 +195,6 @@ def mic_listen_control(state, timeout="5"):
 # ĐĂNG KÝ HÀM VÀO HỆ THỐNG MẸ
 # -----------------------------------------------------------------
 def register(actions_map):
-    """ Đăng ký tự động các lệnh vào bảng điều phối ACTIONS_MAP của tjbot_client.py """
     actions_map["Record"] = {
         "func": mic_record_control,
         "params": "state, timeout='5'",
