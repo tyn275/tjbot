@@ -11,7 +11,8 @@ Group=root
 WorkingDirectory=/home/pi/tjbot_mqtt
 
 # Gọi trực tiếp trình biên dịch Python bên trong môi trường ảo venv dưới quyền root
-ExecStart=/home/pi/tjbot_mqtt/venv/bin/python /home/pi/tjbot_mqtt/tjbot_client.py
+#ExecStart=/home/pi/tjbot_mqtt/venv/bin/python /home/pi/tjbot_mqtt/tjbot_client.py
+ExecStart=/usr/bin/python /home/pi/tjbot_mqtt/tjbot_client.py
 
 # Cấu hình tự động khởi động lại nếu script bị sập nguồn đột ngột
 Restart=always

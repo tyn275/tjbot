@@ -7,7 +7,7 @@
     - [Cánh tay servo](#cánh-tay-servo)
     - [Led trên đầu](#led-trên-đầu)
 - [Cấu hình MQTT trên Raspberry Pi để điều khiển Robot](#cấu-hình-mqtt-trên-raspberry-pi-để-điều-khiển-robot)
-    - [Bước 1: Tạo môi trường ảo VENV và cài thư viện MQTT](#bước-1-tạo-môi-trường-ảo-venv-và-cài-thư-viện-mqtt)
+    - [Bước 1: Tạo môi trường dự án và các thư viện](#bước-1-tạo-môi-trường-dự-án-và-các-thư-viện)
     - [Bước 2: Viết mã nguồn Python xử lý MQTT tjbot_client.py](#bước-2-viết-mã-nguồn-python-xử-lý-mqtt-tjbot_clientpy)
     - [Bước 3: Biến file code thành "Tiến trình chạy ngầm" Systemd Service](#bước-3-biến-file-code-thành-tiến-trình-chạy-ngầm-systemd-service)
     - [Bước 4: Kích hoạt service và kiểm tra tiến trình](#bước-4-kích-hoạt-service-và-kiểm-tra-tiến-trình)
@@ -67,21 +67,20 @@
             dtparam=audio=on
             ```
 
-    4. Nếu muốn dùng Usb Type C để truyền UART thì còn 2 bước thực hiện sau đây, nếu không muốn thì bỏ qua bước 4,5 .\
+    4. Nếu muốn dùng Usb Type C để truyền UART thì còn 2 bước thực hiện sau đây, nếu không muốn thì bỏ qua bước 4,5,6 .\
     Tìm file có tên là **cmdline.txt** và mở nó bằng một trình soạn thảo văn bản (như Notepad).\
-    Tìm tới đoạn cấu hình `modules-load=dwc2,g_others` và thay thế bằng `modules-load=dwc2,g_serial`.
-    5. Và tiếp theo là chạy service phục vụ ở cổng UART đó.
+    Tìm tới đoạn cấu hình `rootwait` và chèn vào sau lệnh `modules-load=dwc2,g_serial`.
+    5. Lưu file lại, an toàn rút thẻ nhớ ra và cắm lại vào Raspberry Pi 4.
+    6. Và tiếp theo là chạy service phục vụ ở cổng UART đó.
 
         ```shell
         sudo systemctl enable getty@ttyGS0.service
         sudo systemctl start getty@ttyGS0.service
         ```
 
-    6. Lưu file lại, an toàn rút thẻ nhớ ra và cắm lại vào Raspberry Pi 4.
-
     7. Để phát âm thanh ra loa theo đường aux 3.5mm, chứ không phải hdmi, thì cần thêm lệnh
 
-        '''shell
+        ```shell
         sudo raspi-config
         ```
 
@@ -92,17 +91,18 @@
 
     8. Để chỉnh âm lượng loa thật to, hãy chạy lệnh
 
-        '''shell
+        ```shell
         alsamixer
         ```
-        
+
         - Một giao diện cột sóng hiện ra, bạn dùng nút Mũi tên lên để kéo cột Headphones hoặc Master lên mức 100 (vạch màu xanh sát đỉnh màu đỏ).
         - Nhấn nút ESC để thoát.
         - Lưu cấu hình âm lượng này vĩnh viễn không bị mất khi rút điện, chạy lệnh:
 
-            '''shell
+            ```shell
             sudo alsactl store
-            ``` 
+            ```
+
     9. Để tài khoản pi được quyển sử dụng âm thanh (bị cấm mặc định), cần cấp quyền bằng lệnh
 
         ```shell
@@ -113,8 +113,8 @@
         và cài các gói phụ thuộc
 
         ```shell
-        sudo apt-get update
-        sudo apt-get install -y libsdl2-mixer-2.0-0 libportmidi0 libsdl2-image-2.0-0 libsdl2-ttf-2.0-0
+            sudo apt-get update
+            sudo apt-get install -y libsdl2-mixer-2.0-0 libportmidi0 libsdl2-image-2.0-0 libsdl2-ttf-2.0-0
         ```
 
         và dùng lênh sau để kiểm tra âm thanh
@@ -158,21 +158,26 @@ Led RGB 10mm Cathod chung
 
 ## Cấu hình MQTT trên Raspberry Pi để điều khiển Robot
 
-### Bước 1: Tạo môi trường ảo (VENV) và cài thư viện MQTT
+### Bước 1: Tạo môi trường dự án và các thư viện
 
-```shell
-# 1. Tạo thư mục dự án cho TJBot và di chuyển vào trong
-mkdir ~/tjbot_mqtt && cd ~/tjbot_mqtt
+- Tạo Cấu trúc thư mục:
 
-# 2. Tạo môi trường ảo tên là venv
-python -m venv venv
+    ```shell
+    mkdir /home/pi/tjbot_mqtt/
+    mkdir /home/pi/tjbot_conn/ 
+    ln -s /home/pi/tjbot_mqtt/features/ /home/pi/tjbot_conn/features
+    ```
 
-# 3. Kích hoạt môi trường ảo
-source venv/bin/activate
+- Cài đặt các gói
 
-# 4. Cài đặt thư viện python
-pip install -r requirements 
-```
+    ```shell
+    audo apt update
+    sudo apt install python3-pip -y
+    sudo apt install -y libcairo2-dev libgirepository1.0-dev greybird-gtk-theme pkg-config python3-dev
+    sudo systemctl enable pigpiod && sudo systemctl start pigpiod
+    sudo apt install pigpio -y
+    pip install -r requirements.txt --break-system-packages    
+    ```
 
 ### Bước 2: Viết mã nguồn Python xử lý MQTT (tjbot_client.py)
 
@@ -181,10 +186,10 @@ Chưc năng giám sát wifi: Soạn file [**/home/pi/tjbot_conn/wifi_monitor.py*
 
 ### Bước 3: Biến file code thành "Tiến trình chạy ngầm" (Systemd Service)
 
-Để code này tự chạy ngay khi bật nguồn Pi mà bạn không cần phải mở PuTTY lên gõ lệnh, hãy tạo một file Service cho hệ thống quản lý
+Để code này tự chạy ngay khi bật nguồn Pi mà bạn không cần phải mở PuTTY lên gõ lệnh, hãy tạo một file Service cho hệ thống quản lý, bằng cách copy các file sau vào đúng chỗ
 
-Service chính: [**/etc/systemd/system/tjbot.service**](./tjbot.service)\
-Service giám sát wifi: [**/etc/systemd/system/wifi-monitor.service**](./wifi-monitor.service)
+1. Service chính: [**/etc/systemd/system/tjbot.service**](./tjbot.service)\
+2. Service giám sát wifi: [**/etc/systemd/system/wifi-monitor.service**](./wifi-monitor.service)
 
 ### Bước 4: Kích hoạt service và kiểm tra tiến trình
 
@@ -219,6 +224,8 @@ sudo systemctl status tjbot.service
 # Xem chi tiết báo lỗi
 sudo journalctl -u tjbot.service -n 50 --no-pager
 ```
+
+>wifi_provisioning.py để cấu hình wifi qua bluetooth chưa thành công
 
 ## Nâng cấp: Giám sát mạng WiFi và đăng kí mới
 
@@ -272,7 +279,6 @@ _
     ```
 
 - Cho phép quét thấy và Kích hoạt cấu hình SPP (Serial Port Profile)
-
 
 ### 🔍 wifiscan() - tìm mạng wifi
 

@@ -7,7 +7,8 @@ Type=simple
 # Chỉ định chính xác thư mục dự án của bạn để Python nhận diện được module 'features'
 WorkingDirectory=/home/pi/tjbot_conn
 # Thay thế /home/pi/tjbot/wifi_monitor.py bằng đường dẫn thực tế trên Pi của bạn
-ExecStart=/usr/bin/python3 /home/pi/tjbot_conn/wifi_monitor.py
+ExecStart=/usr/bin/python /home/pi/tjbot_conn/wifi_monitor.py
+
 # Tự động khởi động lại dịch vụ nếu file Python bị lỗi/bị tắt đột ngột
 Restart=on-failure
 # Chờ 5 giây trước khi khởi động lại
