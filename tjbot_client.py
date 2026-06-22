@@ -9,7 +9,7 @@ from paho.mqtt import client as mqtt_client
 import psutil  
 from paho.mqtt.subscribeoptions import SubscribeOptions
 import threading           
-import RPi.GPIO as GPIO    
+from button_genture import watch_hardware_button
 
 # 🔥 ĐÃ ĐỔI: Import cấu hình và hàm phản hồi từ module mqtt dùng chung
 from features.mqtt import BROKER, PORT, USER, PASSWORD, TOPIC_PUB, BOT_ID, mqtt_response
@@ -158,51 +158,6 @@ def on_message(client, userdata, msg):
         client.publish(TOPIC_SUB, "ERR")
 
 # =====================================================================
-# QUẢN LÝ CHẾ ĐỘ HOẠT ĐỘNG (MODES) QUA NÚT CỨNG GPIO26
-# =====================================================================
-CURRENT_MODE = "NORMAL"  
-BUTTON_PIN = 26          
-
-def watch_hardware_button():
-    global CURRENT_MODE
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    print(f"🔘 [HỆ THỐNG] Đã kích hoạt GPIO{BUTTON_PIN} với chế độ PULL-UP thành công.", flush=True)
-
-    def button_worker():
-        global CURRENT_MODE
-        while True:
-            if GPIO.input(BUTTON_PIN) == GPIO.LOW:
-                start_press_time = time.time()
-                while GPIO.input(BUTTON_PIN) == GPIO.LOW:
-                    time.sleep(0.05)
-                
-                press_duration = time.time() - start_press_time
-                
-                if press_duration >= 1.5:
-                    print("\n🚨 [NÚT CỨNG]: Nhấn GIỮ (>1.5s) -> Khởi chạy Selftest...", flush=True)
-                    try:
-                        subprocess.run(["/usr/bin/python3", "/home/pi/tjbot_mqtt/selftest.py"], timeout=30)
-                    except Exception as e:
-                        print(f"❌ Lỗi chạy Selftest từ nút bấm: {e}", flush=True)
-                        
-                elif press_duration > 0.1: 
-                    if CURRENT_MODE == "NORMAL":
-                        CURRENT_MODE = "LEARNING"
-                        print("\n🔄 [NÚT CỨNG]: Nhấn NHANH -> Đổi Mode sang: 🎓 LEARNING", flush=True)
-                    elif CURRENT_MODE == "LEARNING":
-                        CURRENT_MODE = "STANDBY"
-                        print("\n🔄 [NÚT CỨNG]: Nhấn NHANH -> Đổi Mode sang: 😴 STANDBY", flush=True)
-                    else:
-                        CURRENT_MODE = "NORMAL"
-                        print("\n🔄 [NÚT CỨNG]: Nhấn NHANH -> Quay về Mode: 🤖 NORMAL", flush=True)
-                        
-            time.sleep(0.1) 
-
-    t = threading.Thread(target=button_worker, daemon=True)
-    t.start()
-    
-# =====================================================================
 # Khởi tạo ban đầu
 # =====================================================================
 def welcome():
@@ -248,4 +203,7 @@ def run():
     client.loop_forever()
     
 if __name__ == '__main__':
-    run()
+    try:
+        run()
+    finally:
+        GPIO.cleanup() # Giải phóng chân GPIO khi tắt phần mềm an toàn
