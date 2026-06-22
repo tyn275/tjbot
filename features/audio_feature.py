@@ -3,6 +3,7 @@ import os
 import time
 from gtts import gTTS
 import subprocess
+import threading
 
 # Khởi tạo thư viện pygame mixer để quản lý phát âm thanh nền, cho phép ngắt âm lập tức
 try:
@@ -56,42 +57,56 @@ def play_audio_file(filename):
         return f"Lỗi phát file: {str(e)}"
 
 
-def text_to_speak(text, lang="vi", voice="", service="Google"):
+def text_to_speak(text, lang="vi", voice="", service="Google", blocking=False):
     """
-    Xử lý lệnh: TextToSpeak("văn bản", "mã_ngôn_ngữ", "giọng_đọc", "dịch_vụ") từ phần Tập đọc trên Web.
-    Chuyển đổi chuỗi văn bản thành âm thanh qua thư viện gTTS và phát ra loa.
+    Xử lý chuyển đổi văn bản thành giọng nói qua gTTS và Pygame.
+    Tối ưu hóa: Không chặn luồng MQTT khi tải file từ Google nếu blocking=False.
     """
     text = text.strip('"\'')
     lang = lang.strip('"\'')
     service = service.strip('"\'')
     
-    print(f"-> [TTS]: Nhận lệnh đọc chữ: '{text}' [Ngôn ngữ: {lang}, Dịch vụ: {service}]")
+    print(f"-> [TTS]: Nhận lệnh đọc chữ: '{text}' [Ngôn ngữ: {lang}, Blocking: {blocking}]")
     
     if not text:
         return "Văn bản trống, bỏ qua."
 
-    temp_filename = f"tts_{int(time.time())}.mp3"
-    temp_filepath = os.path.join(CACHE_DIR, temp_filename)
+    def run_tts():
+        temp_filename = f"tts_{int(time.time())}.mp3"
+        temp_filepath = os.path.join(CACHE_DIR, temp_filename)
+        try:
+            if pygame.mixer.music.get_busy():
+                pygame.mixer.music.stop()
 
-    try:
-        # Nếu đang bận phát âm thanh khác thì ra lệnh tắt ngay
-        if pygame.mixer.music.get_busy():
-            pygame.mixer.music.stop()
+            # Tải và lưu file (Gây block mạng nhẹ)
+            tts = gTTS(text=text, lang=lang, slow=False)
+            tts.save(temp_filepath)
+            
+            # Phát âm thanh (Mặc định non-blocking của Pygame)
+            pygame.mixer.music.load(temp_filepath)
+            pygame.mixer.music.play()
+            
+            # Nếu yêu cầu chặn luồng, ép hệ thống đợi phát xong
+            if blocking:
+                print("⏳ [TTS] Khởi động chế độ Chặn Luồng (Blocking)... Đang chờ phát xong âm thanh.")
+                while pygame.mixer.music.get_busy():
+                    time.sleep(0.1)
+                print("✅ [TTS] Đã hoàn thành phát xong âm thanh ở chế độ Blocking.")        
+            
+        except Exception as e:
+            print(f"❌ Lỗi xử lý Text-To-Speech: {e}")
 
-        # Hiện tại gTTS hỗ trợ chuyển đổi Google TTS miễn phí cực kỳ ổn định
-        # (Nếu sau này bạn mở rộng kết nối FPT AI hoặc Viettel AI chỉ cần thêm cấu hình API tại đây)
-        tts = gTTS(text=text, lang=lang, slow=False)
-        tts.save(temp_filepath)
-        
-        # Nạp và phát file tạm vừa tạo ra loa
-        pygame.mixer.music.load(temp_filepath)
-        pygame.mixer.music.play()
-        
-        # Trả về chuỗi thông báo kết quả ra kênh status MQTT
+    # --- ĐIỀU PHỐI ĐỂ TRÁNH NGHẼN MẠNG MQTT ---
+    if blocking:
+        # Chạy trực tiếp tuần tự (Dùng cho hàm welcome đầu game)
+        run_tts()
         return f"Đã đọc xong văn bản qua {service}"
-    except Exception as e:
-        print(f"❌ Lỗi xử lý Text-To-Speech: {e}")
-        return f"Lỗi TTS: {str(e)}"
+    else:
+        # Bọc luồng chạy ngầm (Dùng cho lệnh Web bắn xuống để không bị lag mạng)
+        t = threading.Thread(target=run_tts, name="gTTS_Background_Thread")
+        t.daemon = True
+        t.start()
+        return f"Đang tải và phát văn bản qua {service} dưới nền"
 
 
 def silent_audio():

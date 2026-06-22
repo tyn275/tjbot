@@ -202,12 +202,47 @@ def watch_hardware_button():
     t = threading.Thread(target=button_worker, daemon=True)
     t.start()
     
+# =====================================================================
+# Khởi tạo ban đầu
+# =====================================================================
+def welcome():
+    """
+    Hàm chào mừng hệ thống:
+    - Chạy tự động ngay khi Robot vừa khởi động.
+    - Kích hoạt tiến trình Selftest để kiểm tra toàn bộ linh kiện.
+    - Gọi module âm thanh Audio để phát câu chào bằng giọng nói AI.
+    """
+    print("\n🚀 [WELCOME]: Bắt đầu tiến trình khởi động Robot đa năng...")
+    
+    # 1. Chạy luôn kịch bản Selftest (Kiểm tra phần cứng tự động)
+    print("🚨 [WELCOME] -> Tự động chạy Selftest kiểm tra linh kiện...")
+    try:
+        # Gọi script selftest.py độc lập giống kịch bản của nút bấm cứng
+        subprocess.run(["/usr/bin/python3", "/home/pi/tjbot_mqtt/selftest.py"], timeout=30)
+        print("✅ [WELCOME] -> Hoàn thành bài kiểm tra phần cứng Selftest.")
+    except Exception as e:
+        print(f"❌ [WELCOME LỖI] -> Không thể tự động chạy Selftest: {e}")
+
+    # 2. Thực hiện lời chào bằng cách gọi hàm text_to_speak từ audio_feature
+    print("🔊 [WELCOME] -> Đang phát âm thanh lời chào khởi động...")
+    try:
+        # Lấy hàm nói từ module audio_feature đã được import ở đầu file
+        if hasattr(audio_feature, 'text_to_speak'):
+            chao_mung_text = "Xin chào! Robot t j bót đã khởi động và kiểm tra hệ thống thành công. Tôi đã sẵn sàng nhận lệnh."
+            audio_feature.text_to_speak(chao_mung_text, lang="vi", blocking=True)
+        else:
+            print("⚠️ [WELCOME CẢNH BÁO]: Không tìm thấy hàm text_to_speak trong module audio_feature!")
+    except Exception as e:
+        print(f"❌ [WELCOME LỖI] -> Lỗi phát sinh khi robot tập nói lời chào: {e}")
+        
 def run():
     try:
         watch_hardware_button()
     except Exception as e:
         print(f"⚠️ Không thể bật nút bấm: {e}", flush=True)
 
+    welcome()
+    
     client = connect_mqtt()
     client.on_message = on_message
     client.loop_forever()
