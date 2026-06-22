@@ -147,8 +147,9 @@ def on_message(client, userdata, msg):
         result = target_function(*params)
         
         # 🔥 ĐÃ ĐỔI: Kết quả thực thi hàm đổ thẳng về mqtt_response tập trung
-        mqtt_response(f"{result}")
-        client.publish(TOPIC_SUB, "OK")
+        if (result != None and result != ""):
+            mqtt_response(f"{result}")
+            client.publish(TOPIC_SUB, "OK")
     except TypeError as e:
         print(f"-> [LỖI THAM SỐ]: {e}")
         client.publish(TOPIC_SUB, "ERR") 

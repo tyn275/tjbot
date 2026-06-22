@@ -97,7 +97,8 @@ def set_arm_angle(angle=0):
         if -90 <= angle <= 90:
             servo.angle = angle
             last_known_angle = angle # Ghi nhớ lại góc này
-            return f"SUCCESS: Cánh tay đã quay đến góc {angle} độ."
+            return 
+            # return f"SUCCESS: Cánh tay đã quay đến góc {angle} độ."
         else:
             return "ERROR: Góc quay phải nằm trong khoảng từ -90 đến 90!"
     except ValueError:
