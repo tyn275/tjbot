@@ -135,7 +135,7 @@ def mic_record_control(state, timeout="5"):
 # -----------------------------------------------------------------
 # PHẦN 2: HÀM XỬ LÝ "NGHE HIỂU - AI RECOGNITION" (LISTEN)
 # -----------------------------------------------------------------
-def _listen_and_recognize_worker(timeout_sec):
+def _listen_and_recognize_worker(timeout_sec, lang_code):
     global is_listening
     r = sr.Recognizer()
     
@@ -156,7 +156,7 @@ def _listen_and_recognize_worker(timeout_sec):
             return
 
         print("🤖 [LISTEN AI]: Đang gửi dữ liệu âm thanh lên Cloud AI để xử lý dịch văn bản...")
-        recognized_text = r.recognize_google(audio_data, language="vi-VN")
+        recognized_text = r.recognize_google(audio_data, language=lang_code)
         print(f"🎯 [LISTEN AI] Kết quả dịch thành công: \"{recognized_text}\"")
         
         # 🔥 ĐÃ ĐỔI: Sử dụng hàm dùng chung để bắn thẳng kết quả dạng s2=... lên TOPIC_PUB
@@ -174,19 +174,30 @@ def _listen_and_recognize_worker(timeout_sec):
     finally:
         is_listening = False
 
-def mic_listen_control(state, timeout="5"):
+def mic_listen_control(state, timeout="5", lang="vi-VN"):
     global is_listening
-    state = state.strip().lower()
-    timeout_sec = int(timeout.strip())
+    
+    # Chuẩn hóa dữ liệu đầu vào
+    state = str(state).strip().lower()
+    timeout_sec = int(str(timeout).strip())
+    lang_code = str(lang).strip() # Giữ nguyên hoa thường (ví dụ: vi-VN, en-US)
 
     if state == "on":
         if is_listening:
             return "Robot đang bận lắng nghe dịch ngôn ngữ rồi."
+        
         is_listening = True
-        t = threading.Thread(target=_listen_and_recognize_worker, args=(timeout_sec,))
+        
+        # 🔥 ĐÃ NÂNG CẤP: Truyền thêm mã ngôn ngữ (lang_code) vào hàm worker xử lý mic
+        t = threading.Thread(
+            target=_listen_and_recognize_worker, 
+            args=(timeout_sec, lang_code)
+        )
         t.daemon = True
         t.start()
-        return f"Khởi động AI Nghe hiểu ({timeout_sec}s)"
+        
+        return f"Khởi động AI Nghe hiểu [Ngôn ngữ: {lang_code}] ({timeout_sec}s)"
+    
     else:
         is_listening = False
         return "Đã dừng tiến trình AI lắng nghe"
