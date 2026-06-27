@@ -10,6 +10,7 @@ import psutil
 from paho.mqtt.subscribeoptions import SubscribeOptions
 import threading           
 from button_genture import watch_hardware_button
+import ast   # Phân tích cú pháp trong mqtt payload
 
 # 🔥 ĐÃ ĐỔI: Import cấu hình và hàm phản hồi từ module mqtt dùng chung
 from features.mqtt import BROKER, PORT, USER, PASSWORD, TOPIC_PUB, BOT_ID, mqtt_response
@@ -140,7 +141,22 @@ def on_message(client, userdata, msg):
 
     func_name = match.group(1)
     raw_params = match.group(2)
-    params = [p.strip() for p in raw_params.split(",")] if raw_params else []
+    
+    params = []
+    if raw_params.strip():
+        try:
+            # Bọc chuỗi tham số vào cặp dấu ngoặc vuông [] để biến nó thành một chuỗi List hợp lệ
+            # Ví dụ: ' "2233, Ngân", "vi" ' => '["2233, Ngân", "vi"]'
+            list_str = f"[{raw_params}]"
+            
+            # ast.literal_eval sẽ tự bóc tách chuẩn xác, giữ nguyên dấu phẩy trong ngoặc kép
+            # và tự động loại bỏ các dấu ngoặc kép bọc ngoài chuỗi luôn!
+            params = ast.literal_eval(list_str)
+        except Exception as e:
+            # Dự phòng nếu chuỗi truyền vào quá dị hoặc sai cú pháp ngoặc kép
+            print(f"-> [LỖI PARSE THAM SỐ]: Không thể bóc tách bằng ast, chuyển về split thô. Chi tiết: {e}")
+            params = [p.strip().strip('"').strip("'") for p in raw_params.split(",")] if raw_params else []
+    # ----------------------------------
 
     try:
         target_function = ACTIONS_MAP[func_name]["func"]
