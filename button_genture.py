@@ -84,8 +84,8 @@ def watch_hardware_button():
                 while GPIO.input(BUTTON_PIN) == GPIO.LOW:
                     current_duration = time.time() - start_press_time
                     
-                    # 🔥 CẢI TIẾN: Đạt đủ 5 giây phát lệnh LUÔN, KHÔNG CẦN đợi nhả tay
-                    if current_duration >= 5.0 and not has_triggered_special:
+                    # 🔥 CẢI TIẾN: Đạt đủ 3 giây phát lệnh LUÔN, KHÔNG CẦN đợi nhả tay
+                    if current_duration >= 3.0 and not has_triggered_special:
                         print(f"\n🚨 [NÚT CỨNG]: Đã giữ liên tục {current_duration:.1f}s -> Đọc thông tin mạng ngay lập tức!", flush=True)
                         
                         network_text = get_network_speech_text()
@@ -100,7 +100,7 @@ def watch_hardware_button():
                 # 2. Người dùng ĐÃ NHẢ TAY RA $\rightarrow$ Tính toán xử lý cho cú BẤM NHANH xoay vòng
                 press_total_time = time.time() - start_press_time
                 
-                # Nếu chu kỳ bấm giữ đã kích hoạt chế độ 5 giây rồi thì nhả ra bỏ qua, không tính là bấm nhanh
+                # Nếu chu kỳ bấm giữ đã kích hoạt chế độ 3 giây rồi thì nhả ra bỏ qua, không tính là bấm nhanh
                 if has_triggered_special:
                     print("ℹ️ [NÚT CỨNG]: Đã nhả tay sau khi chạy xong chế độ đặc biệt.", flush=True)
                 
