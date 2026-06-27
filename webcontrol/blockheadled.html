@@ -23,8 +23,8 @@
                 <label class="form-label fw-semibold text-secondary small mb-1">1. ĐIỀU KHIỂN QUA MÃ HEX / PALETTE</label>
             </div>
 
-            <div class="d-flex gap-2 align-items-center mb-3">
-                <div class="input-group input-group-sm" style="max-width: 220px;">
+            <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
+                <div class="input-group input-group-sm" style="max-width: 130px; flex-grow: 2;">
                     <span class="input-group-text bg-dark text-white fw-bold">#</span>
                     <input type="text" id="txtHexInput" class="form-control text-uppercase" value="A020F0" placeholder="A020F0" maxlength="6" oninput="handleTextInput(this.value)">
                     <button class="btn btn-outline-secondary" type="button" onclick="openHexPalette()" title="Mở bảng màu">
@@ -33,18 +33,18 @@
                     <input type="color" id="pickerHex" value="#a020f0" style="position: absolute; width: 1px; height: 1px; opacity: 0; padding: 0; border: 0;" oninput="handlePaletteInput(this.value)">
                 </div>
                 
-                <button class="btn btn-success btn-sm fw-bold px-3 flex-grow-1" onclick="triggerHeadHex('on')">
+                <button class="btn btn-success btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadHex('on')">
                     <i class="fa-solid fa-power-off me-1"></i> Bật
                 </button>
-                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1" onclick="triggerHeadHex('off')">
+                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadHex('off')">
                     <i class="fa-solid fa-lightbulb-slash me-1"></i> Tắt
                 </button>
             </div>
 
-            <div class="d-flex gap-2 align-items-center p-2 bg-light rounded border">
+            <div class="d-flex gap-2 align-items-center p-2 bg-light rounded border flex-wrap">
                 <div class="d-flex align-items-center gap-1">
                     <span class="small text-muted fw-bold text-nowrap" style="font-size: 0.8rem;">Chớp:</span>
-                    <input type="number" id="blinkTimesHex" class="form-control form-control-sm text-center" value="5" min="1" max="20" style="width: 55px;">
+                    <input type="number" id="blinkTimesHex" class="form-control form-control-sm text-center" value="5" min="1" max="20" style="width: 45px;">
                 </div>
                 <div class="d-flex align-items-center gap-1 flex-grow-1">
                     <span class="small text-muted fw-bold text-nowrap" style="font-size: 0.8rem;">Tốc độ:</span>
@@ -53,10 +53,10 @@
                         <option value="slow">Slow</option>
                     </select>
                 </div>
-                <button class="btn btn-warning btn-sm fw-bold px-3" onclick="triggerHeadBlinkHex()">
+                <button class="btn btn-warning btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadBlinkHex()">
                     <i class="fa-solid fa-bolt me-1"></i> Chớp
                 </button>
-                <button class="btn btn-secondary btn-sm fw-bold px-3" onclick="triggerHeadHex('off')">
+                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadHex('off')">
                     Tắt
                 </button>
             </div>
@@ -80,31 +80,31 @@
                 <label class="form-label fw-semibold text-secondary small mb-1">2. ĐIỀU KHIỂN QUA HỆ THẬP PHÂN RGB (0 - 255)</label>
             </div>
 
-            <div class="d-flex gap-2 align-items-center mb-3">
-                <div class="d-flex gap-1" style="max-width: 220px;">
-                    <div class="input-group input-group-sm">
+            <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
+                <div class="d-flex gap-1">
+                    <div class="input-group input-group-sm" style="min-width:80px">
                         <span class="input-group-text bg-danger text-white fw-bold px-1" style="font-size: 0.75rem;">R</span>
                         <input type="number" id="numR" class="form-control rgb-input p-1 text-center" value="0" min="0" max="255" oninput="handleRgbInput()">
                     </div>
-                    <div class="input-group input-group-sm">
+                    <div class="input-group input-group-sm" style="min-width:80px">
                         <span class="input-group-text bg-success text-white fw-bold px-1" style="font-size: 0.75rem;">G</span>
                         <input type="number" id="numG" class="form-control rgb-input p-1 text-center" value="255" min="0" max="255" oninput="handleRgbInput()">
                     </div>
-                    <div class="input-group input-group-sm">
+                    <div class="input-group input-group-sm" style="min-width:80px">
                         <span class="input-group-text bg-primary text-white fw-bold px-1" style="font-size: 0.75rem;">B</span>
                         <input type="number" id="numB" class="form-control rgb-input p-1 text-center" value="0" min="0" max="255" oninput="handleRgbInput()">
                     </div>
                 </div>
 
-                <button class="btn btn-success btn-sm fw-bold px-3 flex-grow-1" onclick="triggerHeadRgb('on')">
+                <button class="btn btn-success btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadRgb('on')">
                     <i class="fa-solid fa-power-off me-1"></i> Bật
                 </button>
-                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1" onclick="triggerHeadRgb('off')">
+                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadRgb('off')">
                     <i class="fa-solid fa-lightbulb-slash me-1"></i> Tắt
                 </button>
             </div>
 
-            <div class="d-flex gap-2 align-items-center p-2 bg-light rounded border">
+            <div class="d-flex gap-2 align-items-center p-2 bg-light rounded border flex-wrap">
                 <div class="d-flex align-items-center gap-1">
                     <span class="small text-muted fw-bold text-nowrap" style="font-size: 0.8rem;">Chớp:</span>
                     <input type="number" id="blinkTimesRgb" class="form-control form-control-sm text-center" value="5" min="1" max="20" style="width: 55px;">
@@ -116,10 +116,10 @@
                         <option value="slow">Slow</option>
                     </select>
                 </div>
-                <button class="btn btn-warning btn-sm fw-bold px-3" onclick="triggerHeadBlinkRgb()">
+                <button class="btn btn-warning btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadBlinkRgb()">
                     <i class="fa-solid fa-bolt me-1"></i> Chớp
                 </button>
-                <button class="btn btn-secondary btn-sm fw-bold px-3" onclick="triggerHeadRgb('off')">
+                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadRgb('off')">
                     Tắt
                 </button>
             </div>

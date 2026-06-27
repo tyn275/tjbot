@@ -33,7 +33,20 @@
         background-color: #dc3545;
         color: #fff;
     }
+
+    /* Responsive tinh chỉnh layout mượt mà chống tràn viền trên mobile */
+    @media (max-width: 575.98px) {
+        .border-end {
+            border-right: none !important;
+            border-bottom: 1px dashed #eee !important;
+            padding-right: 0 !important;
+            padding-bottom: 1rem !important;
+            margin-right: 0 !important;
+            margin-bottom: 0.5rem !important;
+        }
+    }
 </style>
+
 <div class="card p-4 shadow-sm border-0 bg-white h-100">
     <div class="d-flex align-items-center mb-3 flex-wrap gap-3">
         <div class="d-flex align-items-center">
@@ -58,20 +71,20 @@
         </div>
     </div>
     
-    <div class="row align-items-center">
-        <div class="col-auto text-center border-end pe-4 me-2">
-            <div class="p-2 bg-white rounded d-flex flex-column align-items-center justify-content-center border" style="min-width: 150px; min-height: 160px;">
+    <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+        <div class="text-center border-end pe-4 me-2 mx-auto mx-sm-0" style="min-width: 150px;">
+            <div class="p-2 bg-white rounded d-flex flex-column align-items-center justify-content-center border" style="height: 160px;">
                 <canvas id="armCanvas" width="120" height="120" style="cursor: pointer; background: #fafafa; border-radius: 50%;"></canvas>
                 <div class="mt-2 fw-bold text-warning" id="lblAngleDisplay" style="font-size: 0.9rem;">Góc: 0°</div>
             </div>
         </div>
 
-        <div class="col">
+        <div class="flex-grow-1" style="flex-basis: 200px; min-width: 0;">
             <div class="mb-2">
                 <label class="form-label fw-semibold text-secondary small mb-1">1. ĐIỀU KHIỂN GÓC QUAY SERVO</label>
             </div>
 
-            <div class="d-flex flex-column gap-3">
+            <div class="d-flex flex-column gap-3 bg-light p-3 rounded border">
                 <div class="form-check form-switch p-0 d-flex align-items-center gap-2">
                     <input class="form-check-input ms-0" type="checkbox" id="chkFollowMe" style="cursor: pointer; width: 2.5em; height: 1.25em;">
                     <label class="form-check-label small fw-bold text-dark" for="chkFollowMe" style="cursor: pointer;">
@@ -79,7 +92,7 @@
                     </label>
                 </div>
 
-                <button class="btn btn-primary fw-bold w-100" id="btnExecuteArm" onclick="sendSingleArmAngle()">
+                <button class="btn btn-primary fw-bold w-100 btn-sm" id="btnExecuteArm" onclick="sendSingleArmAngle()">
                     <i class="fa-solid fa-circle-check me-1"></i> Thực hiện
                 </button>
             </div>
@@ -92,9 +105,9 @@
 
     <hr class="my-4 text-muted opacity-50" style="border-top: 2px dashed #ccc;">
 
-    <div class="row align-items-center">
-        <div class="col-auto text-center border-end pe-4 me-2">
-            <div class="p-2 bg-white rounded d-flex flex-column align-items-center justify-content-center border" style="min-width: 150px; min-height: 160px;">
+    <div class="d-flex flex-wrap gap-3 align-items-center">
+        <div class="text-center border-end pe-4 me-2 mx-auto mx-sm-0" style="min-width: 150px;">
+            <div class="p-2 bg-white rounded d-flex flex-column align-items-center justify-content-center border" style="height: 160px;">
                 <div class="wave-icon-disk">
                     <i class="fa-solid fa-hand"></i>
                 </div>
@@ -102,28 +115,32 @@
             </div>
         </div>
         
-        <div class="col">
+        <div class="flex-grow-1" style="flex-basis: 200px; min-width: 0;">
             <div class="mb-2">
                 <label class="form-label fw-semibold text-secondary small mb-1">2. VẪY TAY</label>
             </div>
 
-            <div class="d-flex gap-2 align-items-center p-2 bg-light rounded border">
-                <div class="d-flex align-items-center gap-1">
-                    <span class="small text-muted fw-bold text-nowrap" style="font-size: 0.8rem;">Lần:</span>
-                    <input type="number" id="waveTimes" class="form-control form-control-sm text-center" value="1" min="1" max="20" style="width: 55px;">
-                </div>
+            <div class="bg-light p-2 rounded border">
+                <div class="row row-cols-1 row-cols-sm-3 g-2 align-items-end">
+                    <div class="col">
+                        <span class="text-muted small fw-bold d-block mb-1" style="font-size: 0.65rem;">Lần:</span>
+                        <input type="number" id="waveTimes" class="form-control form-control-sm text-center" value="1" min="1" max="20" style="font-size: 0.8rem;">
+                    </div>
 
-                <div class="d-flex align-items-center gap-1 flex-grow-1">
-                    <span class="small text-muted fw-bold text-nowrap" style="font-size: 0.8rem;">Tốc độ:</span>
-                    <select id="waveSpeed" class="form-select form-select-sm">
-                        <option value="fast" selected>Fast</option>
-                        <option value="low">Low</option>
-                    </select>
-                </div>
+                    <div class="col">
+                        <span class="text-muted small fw-bold d-block mb-1" style="font-size: 0.65rem;">Tốc độ:</span>
+                        <select id="waveSpeed" class="form-select form-select-sm" style="font-size: 0.8rem; cursor: pointer;">
+                            <option value="fast" selected>Fast</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
 
-                <button class="btn btn-warning btn-sm fw-bold px-3" onclick="triggerWaveHand()">
-                    <i class="fa-solid fa-hand-wave me-1"></i> Vẫy tay
-                </button>
+                    <div class="col">
+                        <button class="btn btn-warning btn-sm fw-bold w-100 text-white" style="font-size: 0.8rem; white-space: normal;" onclick="triggerWaveHand()">
+                            Vẫy cái tay
+                        </button>
+                    </div>
+                </div>
             </div>
             
             <div class="text-muted mt-2" style="font-size: 0.72rem;">Lệnh xuất: <span id="lblArmCommandLog" class="text-primary fw-bold">Wavehand(fast, 1)</span></div>
@@ -143,18 +160,15 @@
     let currentAngle = 0; // Góc mặc định (0 độ - phương ngang bên phải)
     let isDragging = false;
 
-    // 🔥 LOGIC KHỞI TẠO HOẶC ĐIỀU KHIỂN TOGGLE CƠ BẮP (MUSCLE)
     function toggleMuscle(state) {
         if (state === 'on') {
             sendMQTTCommand("Muscle(on)");
-            // Khi bật lại cơ bắp, cho phép tương tác với các nút điều khiển cánh tay
             btnExecute.disabled = chkFollowMe.checked;
         } else if (state === 'off') {
             sendMQTTCommand("Muscle(off)");
         }
     }
 
-    // --- HÀM VẼ CÁNH TAY TRÊN CANVAS NỬA HÌNH TRÒN ---
     function drawArm(angleDegrees) {
         if (!ctx || !canvas || canvas.width === 0 || canvas.height === 0) return;
 
@@ -236,7 +250,6 @@
         drawArm(currentAngle);
 
         if (chkFollowMe.checked) {
-            // Tự động gạt toggle sang "Cơ bắp" trên giao diện vì đang có lệnh gồng di chuyển
             document.getElementById('radMuscleOn').checked = true;
             sendMQTTCommand(`Arm(${currentAngle})`);
         }
@@ -275,7 +288,7 @@
     chkFollowMe.addEventListener('change', function() {
         if (this.checked) {
             btnExecute.disabled = true; 
-            document.getElementById('radMuscleOn').checked = true; // Ép bật cơ bắp
+            document.getElementById('radMuscleOn').checked = true;
             sendMQTTCommand(`Arm(${currentAngle})`);
         } else {
             btnExecute.disabled = false; 
@@ -283,7 +296,7 @@
     });
 
     function sendSingleArmAngle() {
-        document.getElementById('radMuscleOn').checked = true; // Ép bật cơ bắp để nhận lệnh di chuyển
+        document.getElementById('radMuscleOn').checked = true;
         sendMQTTCommand(`Arm(${currentAngle})`);
     }
 
@@ -291,7 +304,7 @@
         const times = document.getElementById('waveTimes').value || 1;
         const speed = document.getElementById('waveSpeed').value;
         
-        document.getElementById('radMuscleOn').checked = true; // Ép bật cơ bắp
+        document.getElementById('radMuscleOn').checked = true;
         const command = `Wavehand(${speed}, ${times})`;
         document.getElementById('lblArmCommandLog').innerText = `Lệnh xuất: ${command}`;
         

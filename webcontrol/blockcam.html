@@ -9,66 +9,68 @@
         </div>
     </div>
 
-    <div class="w-100 mb-3 text-center">
-        <div class="p-2 bg-dark rounded border position-relative" style="min-height: 220px; background: #0f1418;">
-            
-            <video id="videoPlayer" class="w-100 rounded" style="max-height: 240px; object-fit: contain; background: #000;" controls autoplay playsinline muted></video>
-            
-            <div id="videoPlaceholder" class="position-absolute top-50 start-50 translate-middle text-center w-100">
-                <div class="camera-lens-ui mx-auto" id="lensCamera">
-                    <div class="lens-core">
-                        <i class="fa-solid fa-eye-slash" id="iconEye" style="font-size: 1.6rem; color: #718093;"></i>
-                    </div>
-                </div>
-                <div class="mt-2 text-muted" style="font-size: 1.8rem; line-height: 1;">
-                    <i class="fa-solid fa-eye text-secondary"></i>
-                </div>
-            </div>
-
-            <div id="badgeLive" class="position-absolute top-0 end-0 m-3 badge bg-secondary px-2 py-1 small" style="font-size: 0.65rem; z-index: 5;">OFFLINE</div>
-        </div>
-    </div>
-
-    <div class="w-100">
+    <div class="w-100 mb-3">
         <div class="bg-light p-3 rounded border">
             <div class="row g-2">
-                <div class="col-md-3 col-4">
-                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Độ phân giải:</label>
-                    <select id="selResolution" class="form-select form-select-sm" style="font-size: 0.78rem;">
-                        <option value="640x480" selected>640x480</option>
-                        <option value="1280x720">1280x720</option>
-                    </select>
+                <div class="col-12 mb-2">
+                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">1. ĐỊA CHỈ WEB KÉO LUỒNG VỀ (HLS M3U8 PLAYER URL):</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white" style="font-size: 0.7rem;"><i class="fa-solid fa-download text-info"></i></span>
+                        <input type="text" id="txtVideoPlayerUrl" class="form-control" value="https://train.toolhub.app/hls/vod_5e651998-17be-476a-ad5c-eee09b185cf2/index.m3u8" style="font-size: 0.75rem; font-family: monospace;">
+                        <button class="btn btn-info text-white fw-bold" style="font-size: 0.7rem;" onclick="saveAndPreviewVideoStream()">
+                            <i class="fa-solid fa-floppy-disk me-1"></i> Lưu & Xem ngay
+                        </button>
+                    </div>
                 </div>
 
-                <div class="col-md-9 col-8 mb-1">
-                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">1. Địa chỉ Pi đẩy luồng đi (RTSP Push URL):</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white" style="font-size: 0.7rem;"><i class="fa-solid fa-upload text-warning"></i></span>
-                        <input type="text" id="txtStreamUrl" class="form-control" value="rtsp://media.toolhub.app/tjbot1/eye" style="font-size: 0.75rem; font-family: monospace;">
+                <div class="col-12 mb-2 text-center">
+                    <div class="p-2 bg-dark rounded border position-relative" style="min-height: 220px; background: #0f1418;">
+                        <video id="videoPlayer" class="w-100 rounded" style="max-height: 240px; object-fit: contain; background: #000;" controls autoplay playsinline muted></video>
+                        
+                        <div id="videoPlaceholder" class="position-absolute top-50 start-50 translate-middle text-center w-100">
+                            <div class="camera-lens-ui mx-auto" id="lensCamera">
+                                <div class="lens-core">
+                                    <i class="fa-solid fa-eye-slash" id="iconEye" style="font-size: 1.6rem; color: #718093;"></i>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-muted" style="font-size: 1.8rem; line-height: 1;">
+                                <i class="fa-solid fa-eye text-secondary"></i>
+                            </div>
+                        </div>
+
+                        <div id="badgeLive" class="position-absolute top-0 end-0 m-3 badge bg-secondary px-2 py-1 small" style="font-size: 0.65rem; z-index: 5;">OFFLINE</div>
                     </div>
                 </div>
 
                 <div class="col-12 mb-2">
-                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">2. Địa chỉ Web kéo luồng về (HLS M3U8 Player URL):</label>
+                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">2. ĐỊA CHỈ PI ĐẨY LUỒNG ĐI (RTSP PUSH URL):</label>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white" style="font-size: 0.7rem;"><i class="fa-solid fa-download text-info"></i></span>
-                        <input type="text" id="txtVideoPlayerUrl" class="form-control" value="https://media.toolhub.app/tjbot1/video.m3u8" style="font-size: 0.75rem; font-family: monospace;">
-                        <button class="btn btn-outline-secondary fw-bold" style="font-size: 0.7rem;" onclick="saveAndPublishVideoStream()">
-                            <i class="fa-solid fa-floppy-disk me-1"></i> Lưu & Đồng bộ
+                        <span class="input-group-text bg-white" style="font-size: 0.7rem;"><i class="fa-solid fa-upload text-warning"></i></span>
+                        <input type="text" id="txtStreamUrl" class="form-control" value="rtsp://media.toolhub.app/tjbot1/eye" style="font-size: 0.75rem; font-family: monospace;">
+                        <button class="btn btn-warning text-white fw-bold" style="font-size: 0.7rem;" onclick="saveAndRestartPushServer()">
+                            <i class="fa-solid fa-rotate me-1"></i> Lưu & Khởi động lại
                         </button>
                     </div>
+                </div>
+
+                <div class="col-12 mb-3">
+                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">3. ĐỘ PHÂN GIẢI PHẦN CỨNG CAMERA (RESOLUTION):</label>
+                    <select id="selResolution" class="form-select form-select-sm fw-semibold" style="font-size: 0.78rem;">
+                        <option value="640x480" selected>640 x 480 (Cấu hình VGA tối ưu cho Pi)</option>
+                        <option value="1280x720">1280 x 720 (Cấu hình HD rõ nét)</option>
+                    </select>
                 </div>
 
                 <div class="col-12">
                     <div class="row g-2">
                         <div class="col-6">
                             <button class="btn btn-indigo btn-sm fw-bold w-100 text-white" style="font-size: 0.8rem; background-color: #5c7cfa;" onclick="triggerCamera(true)">
-                                <i class="fa-solid fa-video me-1"></i> Bật Camera hệ thống
+                                <i class="fa-solid fa-video me-1"></i> Bật Camera vật lý
                             </button>
                         </div>
                         <div class="col-6">
                             <button class="btn btn-secondary btn-sm fw-bold w-100" style="font-size: 0.8rem;" onclick="triggerCamera(false)">
-                                <i class="fa-solid fa-video-slash me-1"></i> Tắt Camera hệ thống
+                                <i class="fa-solid fa-video-slash me-1"></i> Tắt Camera vật lý
                             </button>
                         </div>
                     </div>
@@ -97,7 +99,6 @@
         border: 2px solid #718093;
     }
 
-    /* Hiệu ứng xoay quét la-ban radar khi camera đang kết nối */
     .lens-streaming { 
         border-color: #748ffc !important;
         animation: lensRadarScan 1.5s infinite linear; 
@@ -119,26 +120,52 @@
         return false;
     }
 
-    // Hàm thực hiện lưu trữ cục bộ và đồng bộ cấu hình VideoStream qua MQTT
-    window.saveAndPublishVideoStream = function() {
+    // 🔥 ĐÃ CẬP NHẬT: Cho phép xem ngay độc lập hoàn toàn, không cần kết nối MQTT nữa
+    window.saveAndPreviewVideoStream = function() {
+        const playerUrl = document.getElementById('txtVideoPlayerUrl').value.trim();
+        if (!playerUrl) { alert("Không được bỏ trống URL luồng kéo HLS!"); return; }
+
+        // Gửi lệnh MQTT đồng bộ nếu CÓ KẾT NỐI, nếu KHÔNG KẾT NỐI thì bỏ qua bước này chứ không chặn xem video
+        if (checkMqttConnection()) {
+            const cmdVideo = `SetVideoStream("${playerUrl}")`;
+            document.getElementById('lblCamCommandLog').innerHTML = `Lệnh gửi: <span style="color:#15aabf;">${cmdVideo}</span>`;
+            if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmdVideo);
+        } else {
+            console.log("-> [CAMERA]: Đang chạy chế độ Xem ngay Độc lập (Không dùng MQTT)");
+        }
+        
+        // Tiến hành hiển thị và nạp video Player ngay lập tức
+        const video = document.getElementById('videoPlayer');
+        const placeholder = document.getElementById('videoPlaceholder');
+        const badge = document.getElementById('badgeLive');
+
+        if(placeholder) placeholder.classList.add('d-none'); // Ẩn icon con mắt đi
+        if(badge) {
+            badge.innerText = "● PLAYING VOD/LIVE";
+            badge.className = "position-absolute top-0 end-0 m-3 badge bg-info px-2 py-1 small";
+        }
+
+        // Kích hoạt bộ phát HLS nạp URL mới
+        startHlsPlayer(playerUrl, video);
+    };
+
+    window.saveAndRestartPushServer = function() {
         if (!checkMqttConnection()) {
-            alert("⚠️ Lỗi: Chưa kết nối MQTT! Không thể đồng bộ cấu hình luồng VideoStream.");
+            alert("⚠️ Lỗi: Chưa kết nối MQTT! Không thể thay đổi cấu hình RTSP Server trên Robot.");
             return;
         }
-        const playerUrl = document.getElementById('txtVideoPlayerUrl').value.trim();
-        if (!playerUrl) { alert("Không được bỏ trống URL luồng kéo!"); return; }
+        const pushUrl = document.getElementById('txtStreamUrl').value.trim();
+        if (!pushUrl) { alert("Không được bỏ trống URL luồng đẩy RTSP!"); return; }
 
-        // Phát lệnh MQTT báo cho Server điều phối luồng
-        const cmdVideo = `SetVideoStream("${playerUrl}")`;
-        document.getElementById('lblCamCommandLog').innerHTML = `Lệnh gửi: <span style="color:#5c7cfa;">${cmdVideo}</span>`;
-        if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmdVideo);
-        
-        alert("💾 Đã lưu cấu hình và đồng bộ SetVideoStream thành công!");
+        const cmdPush = `SetStreamingServer("${pushUrl}")`;
+        document.getElementById('lblCamCommandLog').innerHTML = `Lệnh gửi: <span style="color:#fd7e14;">${cmdPush}</span>`;
+        if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmdPush);
+        alert("📡 Đã lưu và gửi lệnh cấu hình đầu đẩy lên cho Robot!");
     };
 
     window.triggerCamera = function(status) {
         if (!checkMqttConnection()) {
-            alert("⚠️ Lỗi: Chưa kết nối MQTT Server!");
+            alert("⚠️ Lỗi: Chưa kết nối MQTT Server! Không thể ra lệnh Bật/Tắt phần cứng Camera trên Robot.");
             return;
         }
 
@@ -153,36 +180,29 @@
         const resolution = document.getElementById('selResolution').value;
 
         if (status) {
-            // Bước 1: Hạ lệnh bắt Pi đẩy RTSP lên Server trung gian
             const cmdPush = `SetStreamingServer("${pushServerUrl}")`;
             if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmdPush);
 
             setTimeout(() => {
-                // Bước 2: Hạ lệnh bật phần cứng Camera
                 const cmdStart = `Camera("on", "${resolution}")`;
                 log.innerHTML = `Lệnh: <span style="color:#5c7cfa;">${cmdPush}</span> & <span style="color:#5c7cfa;">${cmdStart}</span>`;
                 if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmdStart);
                 
-                // Cấu hình giao diện UI LIVE
                 if(lens) lens.classList.add('lens-streaming');
                 if(badge) {
                     badge.innerText = "● LIVE STREAM";
                     badge.className = "position-absolute top-0 end-0 m-3 badge bg-danger px-2 py-1 small";
                 }
-                if(placeholder) placeholder.classList.add('d-none'); // Ẩn hình con mắt cute đi để nhường chỗ cho video
+                if(placeholder) placeholder.classList.add('d-none');
 
-                // Bước 3: Khởi động bộ giải mã kéo luồng HLS m3u8 về Video Player
                 startHlsPlayer(pullPlayerUrl, video);
-
             }, 150);
 
         } else {
-            // Lệnh tắt camera gửi xuống Pi
             const cmdStop = `Camera("off")`;
             log.innerHTML = `Lệnh gửi: <span class="text-secondary">${cmdStop}</span>`;
             if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmdStop);
             
-            // Dừng luồng và khôi phục giao diện con mắt cute ban đầu
             stopHlsPlayer(video);
             if(lens) lens.classList.remove('lens-streaming');
             if(placeholder) placeholder.classList.remove('d-none');
@@ -193,27 +213,40 @@
         }
     };
 
+    // 🔥 ĐÃ CẤU HÌNH LẠI: Tối ưu bộ giải mã Hls core chống chặn cors và tự khởi tạo luồng an toàn
     function startHlsPlayer(streamUrl, videoElement) {
-        stopHlsPlayer(videoElement); // Reset luồng cũ nếu có
+        stopHlsPlayer(videoElement); // Hủy hoàn toàn luồng cũ
         
         if (Hls.isSupported()) {
+            // Cấu hình tăng cường bộ đệm nhằm bắt luồng m3u8 cực nhạy
             hlsInstance = new Hls({
-                manifestLoadingMaxRetry: 10,
-                manifestLoadingRetryDelay: 1000
+                manifestLoadingMaxRetry: 15,
+                manifestLoadingRetryDelay: 800,
+                enableWorker: true,
+                lowLatencyMode: true
             });
             hlsInstance.loadSource(streamUrl);
             hlsInstance.attachMedia(videoElement);
+            
             hlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
-                videoElement.play().catch(e => console.log("Chờ người dùng tương tác để tự phát video:", e));
+                // Thêm thuộc tính ép phát tự động không cần tương tác nặng
+                videoElement.play().catch(e => {
+                    console.log("Trình duyệt chặn autoplay âm thanh, đang phát ở chế độ tắt tiếng (muted):", e);
+                    videoElement.muted = true;
+                    videoElement.play();
+                });
             });
             
-            // Bắt lỗi nếu luồng m3u8 chưa kịp sinh ra trên MediaMTX khi Pi vừa bật cam
             hlsInstance.on(Hls.Events.ERROR, function (event, data) {
                 if (data.fatal) {
                     switch (data.type) {
                         case Hls.ErrorTypes.NETWORK_ERROR:
-                            console.log("Đang thử kết nối lại luồng video...");
+                            console.log("🔄 Lỗi mạng hls.js - Thử kết nối lại...");
                             hlsInstance.startLoad();
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            print("🔄 Lỗi Media - Thử phục hồi luồng...");
+                            hlsInstance.recoverMediaError();
                             break;
                         default:
                             stopHlsPlayer(videoElement);
@@ -222,7 +255,7 @@
                 }
             });
         } 
-        // Hỗ trợ trực tiếp cho trình duyệt Safari/iOS không cần thư viện phụ trợ
+        // Dành riêng cho trình duyệt Safari (macOS / iOS iPhone) hỗ trợ HLS mặc định
         else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
             videoElement.src = streamUrl;
             videoElement.addEventListener('loadedmetadata', function() {

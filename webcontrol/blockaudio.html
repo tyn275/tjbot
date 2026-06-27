@@ -1,101 +1,100 @@
 <div class="card p-4 shadow-sm border-0 bg-white h-100">
-    <div class="d-flex align-items-center mb-3">
-        <div class="p-2 rounded me-3" style="background-color: #e3faf2; color: #e64980;">
-            <i class="fa-solid fa-volume-high fa-2x"></i>
-        </div>
-        <div>
-            <h5 class="fw-bold text-dark mb-0">HỆ THỐNG ÂM THANH (AUDIO)</h5>
-            <small class="text-muted">Phát âm thanh ra loa</small>
+    <div class="d-flex align-items-center mb-3 flex-wrap gap-3">
+        <div class="d-flex align-items-center">
+            <div class="p-2 rounded me-3" style="background-color: #fff0f6; color: #e64980;">
+                <i class="fa-solid fa-volume-high fa-2x"></i>
+            </div>
+            <div>
+                <h5 class="fw-bold text-dark mb-0">HỆ THỐNG ÂM THANH (AUDIO)</h5>
+                <small class="text-muted">Phát âm thanh ra loa và chuyển đổi văn bản</small>
+            </div>
         </div>
     </div>
 
-    <div class="row align-items-center mb-3" style="table-layout: fixed; width: 100%; margin: 0;">
-        <div class="col-auto text-center border-end pe-4 me-2">
-            <div class="p-2 bg-white rounded d-flex flex-column align-items-center justify-content-center border"
-                style="min-width: 150px; min-height: 145px;">
+    <div class="d-flex flex-wrap gap-3 align-items-center">
+        <div class="text-center border-end pe-3 me-1 mx-auto mx-sm-0" style="min-width: 150px;">
+            <div class="p-2 bg-white rounded d-flex flex-column align-items-center justify-content-center border" style="height: 160px;">
                 <div class="audio-disk-ui" id="diskBibo">
                     <i class="fa-solid fa-face-kiss-beam" id="iconLips"></i>
                 </div>
-                <div class="mt-2 fw-bold" style="font-size: 0.85rem; color: #e64980;">Bi bô</div>
+                <div class="mt-2 fw-bold" style="font-size: 0.9rem; color: #e64980;">Bi bô</div>
             </div>
         </div>
 
-        <div class="col" style="min-width: 0; overflow: hidden;">
+        <div class="flex-grow-1" style="flex-basis: 220px; min-width: 0;">
             <div class="mb-2">
-                <label class="form-label fw-semibold text-secondary small mb-1" style="font-size: 0.75rem;">1. PHÁT FILE
-                    CÓ SẴN</label>
+                <label class="form-label fw-semibold text-secondary small mb-1">1. PHÁT FILE CÓ SẴN</label>
             </div>
-            <div class="row g-2 align-items-center bg-light p-2 rounded border">
-                <div class="col-12">
-                    <select id="selAudioFile" class="form-select form-select-sm" style="font-size: 0.8rem;">
-                        <option value="hello.mp3" selected>hello.mp3 (Chào hỏi)</option>
-                        <option value="bye.mp3">bye.mp3 (Tạm biệt)</option>
-                        <option value="happy.mp3">happy.mp3 (Vui vẻ)</option>
-                        <option value="alarm.mp3">alarm.mp3 (Cảnh báo)</option>
-                    </select>
-                </div>
-                <div class="col-6">
-                    <button class="btn btn-sm fw-bold w-100"
-                        style="font-size: 0.8rem; background-color: #e64980; color: white;" onclick="triggerPlayFile()">
+
+            <div class="d-flex flex-column gap-2 bg-light p-2 rounded border">
+                <select id="selAudioFile" class="form-select form-select-sm" style="font-size: 0.85rem;">
+                    <option value="hello.mp3" selected>hello.mp3 (Chào hỏi)</option>
+                    <option value="bye.mp3">bye.mp3 (Tạm biệt)</option>
+                    <option value="happy.mp3">happy.mp3 (Vui vẻ)</option>
+                    <option value="alarm.mp3">alarm.mp3 (Cảnh báo)</option>
+                </select>
+                
+                <div class="d-flex gap-2">
+                    <button class="btn fw-bold flex-grow-1 text-white btn-sm"
+                        style="background-color: #e64980; font-size: 0.85rem;" onclick="triggerPlayFile()">
                         <i class="fa-solid fa-play me-1"></i> Nói
                     </button>
-                </div>
-                <div class="col-6">
-                    <button class="btn btn-secondary btn-sm fw-bold w-100" style="font-size: 0.8rem;"
-                        onclick="triggerSilentAudio()">
+                    <button class="btn btn-secondary btn-sm fw-bold px-3" style="font-size: 0.85rem;" onclick="triggerSilentAudio()">
                         <i class="fa-solid fa-comment-slash me-1"></i> Suỵt
                     </button>
                 </div>
             </div>
+            
+            <div class="text-muted small mt-2" style="font-size: 0.7rem;">
+                * Hướng dẫn: Chọn file âm thanh hệ thống tích hợp sẵn và nhấn nút Nói.
+            </div>
         </div>
     </div>
 
-    <hr class="my-3 text-muted opacity-50" style="border-top: 1px dashed #ccc;">
+    <hr class="my-4 text-muted opacity-50" style="border-top: 2px dashed #ccc;">
 
-    <div class="row align-items-center" style="table-layout: fixed; width: 100%; margin: 0;">
-        <div class="col-auto text-center border-end pe-4 me-2">
-            <div class="p-2 bg-white rounded d-flex flex-column align-items-center justify-content-center border"
-                style="min-width: 150px; min-height: 240px;">
+    <div class="d-flex flex-wrap gap-3 align-items-center">
+        <div class="text-center border-end pe-3 me-1 mx-auto mx-sm-0" style="min-width: 150px;">
+            <div class="p-2 bg-white rounded d-flex flex-column align-items-center justify-content-center border" style="height: 220px;">
                 <div class="audio-disk-ui" id="diskTapDoc">
                     <i class="fa-solid fa-book-open-reader" id="iconBook"></i>
                 </div>
-                <div class="mt-2 fw-bold text-primary" style="font-size: 0.85rem;">Tập đọc</div>
+                <div class="mt-2 fw-bold text-primary" style="font-size: 0.9rem;">Tập đọc</div>
             </div>
         </div>
-
-        <div class="col" style="min-width: 0; overflow: hidden;">
-            <div class="mb-1">
-                <label class="form-label fw-semibold text-secondary small mb-0" style="font-size: 0.75rem;">2. CHUYỂN
-                    ĐỔI VĂN BẢN (TTS)</label>
+        
+        <div class="flex-grow-1" style="flex-basis: 220px; min-width: 0;">
+            <div class="mb-2">
+                <label class="form-label fw-semibold text-secondary small mb-1">2. CHUYỂN ĐỔI VĂN BẢN (TTS)</label>
             </div>
-            <div class="bg-light p-2 rounded border d-flex flex-column gap-2">
+
+            <div class="d-flex flex-column gap-2 p-2 bg-light rounded border">
                 <div>
-                    <textarea id="txtTtsInput" class="form-control form-control-sm" rows="3" style="font-size: 0.8rem;"
-                        placeholder="Nhập văn bản..." oninput="validateWordLimit(this)"></textarea>
+                    <textarea id="txtTtsInput" class="form-control form-control-sm" rows="2" style="font-size: 0.85rem;"
+                        placeholder="Nhập văn bản cho robot đọc..." oninput="validateWordLimit(this)"></textarea>
                     <div class="d-flex justify-content-between mt-1 px-1" style="font-size: 0.65rem;">
                         <span class="text-danger fw-bold" id="lblTtsAlert"></span>
                         <span class="text-muted" id="lblWordCount">0 / 120 từ</span>
                     </div>
                 </div>
 
-                <div class="row g-2">
-                    <div class="col-4">
-                        <label class="text-muted small fw-bold d-block" style="font-size:0.65rem;">Mã quốc gia:</label>
-                        <select id="selLang" class="form-select form-select-sm" style="font-size: 0.75rem;"
-                            onchange="updateVoiceDropdown()">
+                <div class="d-flex flex-wrap gap-2">
+                    <div class="flex-grow-1" style="flex-basis: 80px;">
+                        <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Quốc gia:</label>
+                        <select id="selLang" class="form-select form-select-sm" style="font-size: 0.8rem;" onchange="updateVoiceDropdown()">
                             <option value="vi" selected>Tiếng Việt</option>
                             <option value="en">English</option>
                             <option value="ja">Japanese</option>
                         </select>
                     </div>
-                    <div class="col-4">
-                        <label class="text-muted small fw-bold d-block" style="font-size:0.65rem;">Giọng đọc:</label>
-                        <select id="selVoice" class="form-select form-select-sm" style="font-size: 0.75rem;">
+                    <div class="flex-grow-1" style="flex-basis: 80px;">
+                        <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Giọng đọc:</label>
+                        <select id="selVoice" class="form-select form-select-sm" style="font-size: 0.8rem;">
                         </select>
                     </div>
-                    <div class="col-4">
-                        <label class="text-muted small fw-bold d-block" style="font-size:0.65rem;">Dịch vụ:</label>
-                        <select id="selService" class="form-select form-select-sm" style="font-size: 0.75rem;">
+                    <div class="flex-grow-1" style="flex-basis: 80px;">
+                        <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Dịch vụ:</label>
+                        <select id="selService" class="form-select form-select-sm" style="font-size: 0.8rem;">
                             <option value="Google" selected>Google</option>
                             <option value="FPT">FPT AI</option>
                             <option value="Viettel">Viettel AI</option>
@@ -103,84 +102,58 @@
                     </div>
                 </div>
 
-                <div class="row g-2">
-                    <div class="col-6">
-                        <button class="btn btn-primary btn-sm fw-bold w-100" style="font-size: 0.8rem;"
-                            onclick="triggerTTS()">
-                            <i class="fa-solid fa-volume-high me-1"></i> Đọc
-                        </button>
-                    </div>
-                    <div class="col-6">
-                        <button class="btn btn-secondary btn-sm fw-bold w-100" style="font-size: 0.8rem;"
-                            onclick="triggerSilentAudio()">
-                            <i class="fa-solid fa-comment-slash me-1"></i> Suỵt
-                        </button>
-                    </div>
+                <div class="d-flex gap-2 mt-1">
+                    <button class="btn btn-primary btn-sm fw-bold flex-grow-1" style="font-size: 0.85rem;" onclick="triggerTTS()">
+                        <i class="fa-solid fa-volume-high me-1"></i> Đọc ngay
+                    </button>
+                    <button class="btn btn-secondary btn-sm fw-bold px-3" style="font-size: 0.85rem;" onclick="triggerSilentAudio()">
+                        <i class="fa-solid fa-comment-slash me-1"></i> Suỵt
+                    </button>
                 </div>
             </div>
-
-            <div class="text-muted mt-2 small d-block text-truncate" style="max-width: 100%; font-size: 0.65rem;">
-                Chuỗi lệnh MQTT: <span id="lblAudioCommandLog" class="text-primary fw-bold">Đang đợi...</span>
-            </div>
+            
+            <div class="text-muted mt-2" style="font-size: 0.72rem;">Lệnh xuất: <span id="lblAudioCommandLog" class="text-primary fw-bold">Đang đợi...</span></div>
         </div>
     </div>
 </div>
 
 <style>
     .audio-disk-ui {
-        width: 110px;
-        height: 110px;
+        width: 120px;
+        height: 120px;
         background: #fafafa;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.02);
-        transition: all 0.3s ease;
     }
 
-    #iconLips {
-        font-size: 2.8rem;
-        color: #e64980;
-    }
+    #iconLips { font-size: 3rem; color: #e64980; }
+    #iconBook { font-size: 2.8rem; color: #1c7ed6; }
 
-    #iconBook {
-        font-size: 2.6rem;
-        color: #1c7ed6;
-    }
-
-    .talking-animation {
-        animation: lipsChattering 0.25s ease-in-out infinite;
-        color: #e64980 !important;
-    }
-
+    .talking-animation { animation: lipsChattering 0.25s ease-in-out infinite; }
     @keyframes lipsChattering {
-        0% {
-            transform: scaleY(1) scaleX(1);
-        }
-
-        50% {
-            transform: scaleY(0.5) scaleX(1.05);
-        }
-
-        100% {
-            transform: scaleY(1) scaleX(1);
-        }
+        0% { transform: scaleY(1) scaleX(1); }
+        50% { transform: scaleY(0.6) scaleX(1.05); }
+        100% { transform: scaleY(1) scaleX(1); }
     }
 
-    .reading-animation {
-        animation: bookReading 0.6s ease-in-out infinite alternate;
-        color: #3b5bdb !important;
-    }
-
+    .reading-animation { animation: bookReading 0.5s ease-in-out infinite alternate; }
     @keyframes bookReading {
-        0% {
-            transform: rotate(-5deg) scale(1);
-        }
+        0% { transform: rotate(-6deg) scale(1); }
+        100% { transform: rotate(6deg) scale(1.05); }
+    }
 
-        100% {
-            transform: rotate(5deg) scale(1.05);
-            filter: drop-shadow(0 0 5px rgba(28, 126, 214, 0.5));
+    /* Màn hình siêu nhỏ: Ẩn đường viền phải của đĩa tròn và đổi thành viền dưới nhẹ */
+    @media (max-width: 575.98px) {
+        .border-end {
+            border-right: none !important;
+            border-bottom: 1px dashed #eee !important;
+            padding-right: 0 !important;
+            padding-bottom: 1rem !important;
+            margin-right: 0 !important;
+            margin-bottom: 0.5rem !important;
         }
     }
 </style>
@@ -204,7 +177,6 @@
         };
     }
 
-    // Hàm tiện ích nội bộ để kiểm tra trạng thái kết nối MQTT của trang mẹ
     function checkMqttConnection() {
         if (typeof mqttClient !== "undefined" && mqttClient && typeof mqttClient.isConnected === "function") {
             return mqttClient.isConnected();
@@ -239,45 +211,39 @@
     };
 
     window.triggerPlayFile = function () {
-        // 🔒 CHẶN HOẠT HỌA NẾU MẤT KẾT NỐI
         if (!checkMqttConnection()) {
             alert("⚠️ Lỗi: Chưa kết nối MQTT Server! Không thể thực hiện lệnh phát âm thanh.");
             return;
         }
-
         const file = document.getElementById('selAudioFile').value;
         const cmd = `Play("${file}")`;
-        document.getElementById('lblAudioCommandLog').innerHTML = `Lệnh: <span class="text-success">${cmd}</span>`;
+        document.getElementById('lblAudioCommandLog').innerHTML = `Play("${file}")`;
         window.stopAllAudioAnimations();
         document.getElementById('iconLips').classList.add('talking-animation');
         if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmd);
     };
 
     window.triggerTTS = function () {
-        // 🔒 CHẶN HOẠT HỌA NẾU MẤT KẾT NỐI
         if (!checkMqttConnection()) {
             alert("⚠️ Lỗi: Chưa kết nối MQTT Server! Không thể thực hiện chuyển đổi văn bản.");
             return;
         }
-
         const txtEl = document.getElementById('txtTtsInput');
         if (!txtEl || !txtEl.value.trim()) { alert("Hãy nhập chữ!"); return; }
         const cmd = `TextToSpeak("${txtEl.value.trim()}", "${document.getElementById('selLang').value}", "${document.getElementById('selVoice').value}", "${document.getElementById('selService').value}")`;
-        document.getElementById('lblAudioCommandLog').innerHTML = `Lệnh: <span class="text-primary">${cmd}</span>`;
+        document.getElementById('lblAudioCommandLog').innerHTML = `TextToSpeak(...)`;
         window.stopAllAudioAnimations();
         document.getElementById('iconBook').classList.add('reading-animation');
         if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmd);
     };
 
     window.triggerSilentAudio = function () {
-        // 🔒 CHẶN HOẠT HỌA NẾU MẤT KẾT NỐI
         if (!checkMqttConnection()) {
             alert("⚠️ Lỗi: Chưa kết nối MQTT Server!");
             return;
         }
-
         const cmd = "Silent()";
-        document.getElementById('lblAudioCommandLog').innerHTML = `Lệnh: <span class="text-danger">${cmd}</span>`;
+        document.getElementById('lblAudioCommandLog').innerHTML = `Silent()`;
         window.stopAllAudioAnimations();
         if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmd);
     };
