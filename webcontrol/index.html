@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-base="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-base="Pragma" content="no-cache">
-    <meta http-base="Expires" content="0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>TJBot MQTT Control Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
@@ -554,14 +554,34 @@
         }
 
         function onMessageArrived(message) {
+
+            const device_id = document.getElementById('botIdInput').value.trim();
             const topic = message.destinationName;
             const payload = message.payloadString;
 
-            // Nếu tin nhắn đổ về từ kênh Speech-To-Text hoặc chứa từ khóa s2t
-            if (topic === "tjbot1/s2t_output" || payload.includes("s2t=")) {
+            // KHông dành cho thiết bị này
+            if (!topic.startsWith(device_id)) return;
+
+            writeLog(`📥 [STATUS RECEIVE] từ kênh [${message.destinationName}]: <span class="text-info">${message.payloadString}</span>`);
+
+            // Không đúng kênh phản hồi
+            if (topic !== `${device_id}/status`) return;
+
+            // Nếu chứa từ khóa s2t
+            if (payload.includes("s2t=")) {
                 // 🔥 ĐIỀU KIỆN QUYẾT ĐỊNH: Bắn dữ liệu vào hàm toàn cục của khối Mic
                 if (typeof window.handleMqttSpeechToText === "function") {
                     window.handleMqttSpeechToText(payload);
+                }
+            }
+
+
+            // Nhận diện các mẫu chuỗi trả về từ cam_feature.py trên Pi
+            if (payload.includes("cam=")) {
+                console.log("DDa vafo day roi")
+                if (typeof window.handleCameraStatusResponse === "function") {
+                    // Chuyển tiếp nội dung bóc tách được trực tiếp vào khối hiển thị giao diện con
+                    window.handleCameraStatusResponse(payload);
                 }
             }
         };

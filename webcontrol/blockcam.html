@@ -16,7 +16,7 @@
                     <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">1. ĐỊA CHỈ WEB KÉO LUỒNG VỀ (HLS M3U8 PLAYER URL):</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-white" style="font-size: 0.7rem;"><i class="fa-solid fa-download text-info"></i></span>
-                        <input type="text" id="txtVideoPlayerUrl" class="form-control" value="https://train.toolhub.app/hls/vod_5e651998-17be-476a-ad5c-eee09b185cf2/index.m3u8" style="font-size: 0.75rem; font-family: monospace;">
+                        <input type="text" id="txtVideoPlayerUrl" class="form-control" value="https://train.toolhub.app/hls/cctv_9fb7ad3e-b8fc-431b-bff9-9a8760a8c845/index.m3u8" style="font-size: 0.75rem; font-family: monospace;">
                         <button class="btn btn-info text-white fw-bold" style="font-size: 0.7rem;" onclick="saveAndPreviewVideoStream()">
                             <i class="fa-solid fa-floppy-disk me-1"></i> Lưu & Xem ngay
                         </button>
@@ -46,19 +46,29 @@
                     <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">2. ĐỊA CHỈ PI ĐẨY LUỒNG ĐI (RTSP PUSH URL):</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-white" style="font-size: 0.7rem;"><i class="fa-solid fa-upload text-warning"></i></span>
-                        <input type="text" id="txtStreamUrl" class="form-control" value="rtsp://media.toolhub.app/tjbot1/eye" style="font-size: 0.75rem; font-family: monospace;">
+                        <input type="text" id="txtStreamUrl" class="form-control" value="rtsp://TRAIN.toolhub.app:8554/live/tjbot1/eye" style="font-size: 0.75rem; font-family: monospace;">
                         <button class="btn btn-warning text-white fw-bold" style="font-size: 0.7rem;" onclick="saveAndRestartPushServer()">
                             <i class="fa-solid fa-rotate me-1"></i> Lưu & Khởi động lại
                         </button>
                     </div>
                 </div>
 
-                <div class="col-12 mb-3">
+                <div class="col-12 mb-2">
                     <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">3. ĐỘ PHÂN GIẢI PHẦN CỨNG CAMERA (RESOLUTION):</label>
                     <select id="selResolution" class="form-select form-select-sm fw-semibold" style="font-size: 0.78rem;">
-                        <option value="640x480" selected>640 x 480 (Cấu hình VGA tối ưu cho Pi)</option>
+                        <option value="320x240" selected>320 x 240 (Cấu hình QVGA)</option>
+                        <option value="640x480">640 x 480 (Cấu hình VGA)</option>
                         <option value="1280x720">1280 x 720 (Cấu hình HD rõ nét)</option>
                     </select>
+                </div>
+
+                <div class="col-12 mb-3">
+                    <div class="d-flex align-items-center bg-white p-2 rounded border">
+                        <button class="btn btn-outline-primary btn-sm fw-bold me-2" style="font-size: 0.7rem; white-space: nowrap;" onclick="manualCheckCamera()">
+                            <i class="fa-solid fa-square-poll-horizontal me-1"></i> Kiểm tra trạng thái
+                        </button>
+                        <span id="lblCameraStatusText" class="fw-bold text-muted" style="font-size: 0.72rem; word-break: break-word;">Chưa kiểm tra</span>
+                    </div>
                 </div>
 
                 <div class="col-12">
@@ -120,12 +130,51 @@
         return false;
     }
 
-    // 🔥 ĐÃ CẬP NHẬT: Cho phép xem ngay độc lập hoàn toàn, không cần kết nối MQTT nữa
+    // BỔ SUNG: Hàm thực hiện gọi hàm CheckCamera() gửi lên Pi
+    window.manualCheckCamera = function() {
+        const statusText = document.getElementById('lblCameraStatusText');
+        const log = document.getElementById('lblCamCommandLog');
+
+        if (!checkMqttConnection()) {
+            statusText.innerText = "⚠️ Chưa kết nối MQTT Server!";
+            statusText.className = "fw-bold text-danger";
+            return;
+        }
+
+        statusText.innerText = "⏳ Đang truy vấn trạng thái từ Pi...";
+        statusText.className = "fw-bold text-primary";
+
+        const cmdCheck = "CheckCamera()";
+        log.innerHTML = `Lệnh gửi: <span style="color:#007bff;">${cmdCheck}</span>`;
+        
+        if (typeof sendMQTTCommand === "function") {
+            sendMQTTCommand(cmdCheck);
+        }
+    };
+
+    // BỔ SUNG: Hàm nhận kết quả phản hồi được điều phối từ index.html đưa sang
+    window.handleCameraStatusResponse = function(payload) {
+        console.log("hshshs");
+        const statusText = document.getElementById('lblCameraStatusText');
+        if (!statusText) return;
+
+        const cam_status = payload.split("=")[1];
+        statusText.innerText = cam_status;
+        
+        // Nhận diện trạng thái để đổi màu Text sinh động
+        if (cam_status === "on") {
+            statusText.className = "fw-bold text-success";
+        } else if (cam_status === "off") {
+            statusText.className = "fw-bold text-secondary";
+        } else {
+            statusText.className = "fw-bold text-dark";
+        }
+    };
+
     window.saveAndPreviewVideoStream = function() {
         const playerUrl = document.getElementById('txtVideoPlayerUrl').value.trim();
         if (!playerUrl) { alert("Không được bỏ trống URL luồng kéo HLS!"); return; }
 
-        // Gửi lệnh MQTT đồng bộ nếu CÓ KẾT NỐI, nếu KHÔNG KẾT NỐI thì bỏ qua bước này chứ không chặn xem video
         if (checkMqttConnection()) {
             const cmdVideo = `SetVideoStream("${playerUrl}")`;
             document.getElementById('lblCamCommandLog').innerHTML = `Lệnh gửi: <span style="color:#15aabf;">${cmdVideo}</span>`;
@@ -134,18 +183,16 @@
             console.log("-> [CAMERA]: Đang chạy chế độ Xem ngay Độc lập (Không dùng MQTT)");
         }
         
-        // Tiến hành hiển thị và nạp video Player ngay lập tức
         const video = document.getElementById('videoPlayer');
         const placeholder = document.getElementById('videoPlaceholder');
         const badge = document.getElementById('badgeLive');
 
-        if(placeholder) placeholder.classList.add('d-none'); // Ẩn icon con mắt đi
+        if(placeholder) placeholder.classList.add('d-none');
         if(badge) {
             badge.innerText = "● PLAYING VOD/LIVE";
             badge.className = "position-absolute top-0 end-0 m-3 badge bg-info px-2 py-1 small";
         }
 
-        // Kích hoạt bộ phát HLS nạp URL mới
         startHlsPlayer(playerUrl, video);
     };
 
@@ -160,7 +207,6 @@
         const cmdPush = `SetStreamingServer("${pushUrl}")`;
         document.getElementById('lblCamCommandLog').innerHTML = `Lệnh gửi: <span style="color:#fd7e14;">${cmdPush}</span>`;
         if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmdPush);
-        alert("📡 Đã lưu và gửi lệnh cấu hình đầu đẩy lên cho Robot!");
     };
 
     window.triggerCamera = function(status) {
@@ -213,12 +259,10 @@
         }
     };
 
-    // 🔥 ĐÃ CẤU HÌNH LẠI: Tối ưu bộ giải mã Hls core chống chặn cors và tự khởi tạo luồng an toàn
     function startHlsPlayer(streamUrl, videoElement) {
-        stopHlsPlayer(videoElement); // Hủy hoàn toàn luồng cũ
+        stopHlsPlayer(videoElement);
         
         if (Hls.isSupported()) {
-            // Cấu hình tăng cường bộ đệm nhằm bắt luồng m3u8 cực nhạy
             hlsInstance = new Hls({
                 manifestLoadingMaxRetry: 15,
                 manifestLoadingRetryDelay: 800,
@@ -229,7 +273,6 @@
             hlsInstance.attachMedia(videoElement);
             
             hlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
-                // Thêm thuộc tính ép phát tự động không cần tương tác nặng
                 videoElement.play().catch(e => {
                     console.log("Trình duyệt chặn autoplay âm thanh, đang phát ở chế độ tắt tiếng (muted):", e);
                     videoElement.muted = true;
@@ -245,7 +288,7 @@
                             hlsInstance.startLoad();
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
-                            print("🔄 Lỗi Media - Thử phục hồi luồng...");
+                            console.log("🔄 Lỗi Media - Thử phục hồi luồng...");
                             hlsInstance.recoverMediaError();
                             break;
                         default:
@@ -255,7 +298,6 @@
                 }
             });
         } 
-        // Dành riêng cho trình duyệt Safari (macOS / iOS iPhone) hỗ trợ HLS mặc định
         else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
             videoElement.src = streamUrl;
             videoElement.addEventListener('loadedmetadata', function() {

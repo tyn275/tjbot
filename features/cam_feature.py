@@ -6,10 +6,11 @@ import time
 
 # --- BIẾN TOÀN CỤC LƯU TRẠNG THÁI ---
 # Mặc định cấu hình các luồng theo yêu cầu hệ thống
-rtsp_push_url = "rtsp://media.toolhub.app/tjbot1/eye"
-hls_pull_url = "https://media.toolhub.app/tjbot1/video.m3u8"
+rtsp_push_url = "rtsp://TRAIN.toolhub.app:8554/live/tjbot1/eye"
+hls_pull_url = "https://train.toolhub.app/hls/cctv_9fb7ad3e-b8fc-431b-bff9-9a8760a8c845/index.m3u8"
+device_id = "tjbot1" # Thêm tham số định danh thiết bị mặc định
 
-# Biến lưu trữ tiến trình con hệ thống (FFmpeg)
+# Biến lưu trữ tiến trình con hệ thống (Tiến trình Pipe)
 camera_process = None
 is_camera_streaming = False
 
@@ -46,74 +47,96 @@ def set_video_stream(url_text):
     return f"Đã đồng bộ VideoStream Player: {hls_pull_url}"
 
 # -----------------------------------------------------------------
-# 3. TIẾN TRÌNH CHẠY NGẦM BẬT PHẦN CỨNG VÀ ĐẨY LUỒNG (FFMPEG WORKER)
+# 3. HÀM KIỂM TRA TRẠNG THÁI CAMERA (MỚI BỔ SUNG)
+# -----------------------------------------------------------------
+def check_camera_status():
+    """
+    Xử lý lệnh: CheckCamera() từ Website để kiểm tra trạng thái
+    """
+    global is_camera_streaming, camera_process
+    
+    # Kiểm tra thực tế bằng cả biến trạng thái và tiến trình Linux ngầm
+    if is_camera_streaming and camera_process and camera_process.poll() is None:
+        return f"cam=on"   # 🟢 [ONLINE]
+    else:
+        return f"cam=off"  # 🔴 [OFFLINE]
+
+# -----------------------------------------------------------------
+# 4. TIẾN TRÌNH CHẠY NGẦM BẬT PHẦN CỨNG VÀ ĐẨY LUỒNG (RPICAM + FFMPEG WORKER)
 # -----------------------------------------------------------------
 def _ffmpeg_stream_worker(resolution):
-    global camera_process, is_camera_streaming, rtsp_push_url
+    global camera_process, is_camera_streaming, rtsp_push_url, device_id
     
-    # Tách chuỗi độ phân giải (Ví dụ: "640x480" -> ["640", "480"])
     try:
         width, height = resolution.split('x')
     except Exception:
-        width, height = "640", "480" # Giá trị mặc định an toàn
+        width, height = "640", "480"
+    
+    fps = "25"
+    print(f"🎥 [FFMPEG_LIVE]: Thiết bị '{device_id}' triệu gọi cam_streaming.sh [{width}x{height}] phát tới {rtsp_push_url}...")
 
-    print(f"🎥 [FFMPEG_LIVE]: Khởi tạo phần cứng Camera với độ phân giải {width}x{height}...")
-
-    # Cấu hình chuỗi lệnh FFmpeg tối ưu riêng cho Raspberry Pi:
-    # - v4l2: Driver camera tiêu chuẩn của Linux trên Pi.
-    # - h264_v4l2m2m: Trình biên dịch mã hóa H.264 bằng CHIP PHẦN CỨNG (Hardware Acceleration) của Pi giúp không bị treo CPU.
-    # - rtsp_transport tcp: Ép đẩy luồng qua giao thức TCP để bảo toàn khung hình không bị vỡ/giật.
-    cmd = [
-        "ffmpeg",
-        "-y",
-        "-f", "v4l2",
-        "-video_size", f"{width}x{height}",
-        "-framerate", "20",
-        "-i", "/dev/video0", # Đường dẫn phần cứng camera mặc định trên Pi
-        "-vcodec", "h264_v4l2m2m", # Mã hóa cứng cực nhẹ
-        "-pix_fmt", "yuv420p",
-        "-b:v", "800k", # Băng thông tối ưu, truyền qua Internet mượt mà
-        "-f", "rtsp",
-        "-rtsp_transport", "tcp",
-        rtsp_push_url
-    ]
+    script_path = "./features/cam_streaming.sh" 
+    
+    # Truyền thêm biến device_id làm tham số thứ 5 cho script .sh
+    cmd = [script_path, rtsp_push_url, width, height, fps, device_id]
 
     try:
-        # Chạy tiến trình ngầm, ẩn hoàn toàn output rác của ffmpeg ra màn hình nền
+        # Hướng stderr vào stdout để gộp chung làm 1 luồng log duy nhất
         camera_process = subprocess.Popen(
             cmd, 
             stdout=subprocess.PIPE, 
-            stderr=subprocess.STDOUT, 
+            stderr=subprocess.STDOUT,
             universal_newlines=True
         )
         
         is_camera_streaming = True
-        print(f"🚀 [FFMPEG_LIVE]: Luồng video đang được đẩy liên tục lên máy chủ: {rtsp_push_url}")
+        print(f"🚀 [FFMPEG_LIVE]: Tiến trình script .sh đã kích hoạt. Đang đọc log...")
         
-        # Vòng lặp giám sát xem ffmpeg có bị sập hay tắt giữa chừng không
-        while is_camera_streaming and camera_process.poll() is None:
-            time.sleep(0.5)
+        # Vòng lặp đọc log thời gian thực (Real-time stdout reader)
+        # Vòng lặp này sẽ chặn tại đây và in liên tục cho đến khi script .sh dừng hẳn
+        for line in camera_process.stdout:
+            if line:
+                print(f"📝 [SH_LOG]: {line.strip()}")
+            if not is_camera_streaming:
+                break
+                
+        # Khi thoát khỏi vòng lặp trên nghĩa là tiến trình .sh đã kết thúc
+        poll_status = camera_process.poll()
+        print(f"❌ [FFMPEG_LIVE]: Script .sh đã dừng với mã thoát (Exit Code): {poll_status}")
             
     except Exception as e:
-        print(f"❌ Lỗi nghiêm trọng khi thực thi FFmpeg: {e}")
+        print(f"❌ Lỗi nghiêm trọng khi chạy file script: {e}")
     finally:
         _stop_ffmpeg_process()
-
+        
 def _stop_ffmpeg_process():
     global camera_process, is_camera_streaming
     is_camera_streaming = False
+    
     if camera_process:
         try:
-            print("🛑 [FFMPEG_LIVE]: Đang giải phóng phần cứng và ngắt luồng Camera...")
-            camera_process.terminate() # Ra lệnh tắt an toàn
-            camera_process.wait(timeout=2) # Chờ tối đa 2 giây để tiến trình đóng hẳn
-        except Exception:
+            print("🛑 [FFMPEG_LIVE]: Đang gửi tín hiệu ngắt script .sh và giải phóng Camera...")
+            
+            # 1. Gửi tín hiệu terminate đến tiến trình cha (file .sh)
+            camera_process.terminate() 
+            
+            # 2. Ép buộc dọn dẹp tận gốc rpicam-vid và ffmpeg do file .sh sinh ra
+            # Việc này đảm bảo đèn LED trên camera tắt và giải phóng phần cứng ngay lập tức
+            os.system("pkill -f rpicam-vid")
+            os.system("pkill -f ffmpeg")
+            
+            # 3. Chờ tiến trình gốc đóng hẳn
+            camera_process.wait(timeout=1)
+        except Exception as e:
+            print(f"⚠️ Có lỗi nhỏ khi giải phóng tiến trình: {e}")
+            # Nếu vẫn cứng đầu, ép diệt hoàn toàn
             try:
-                camera_process.kill() # Ép buộc diệt nếu tiến trình cứng đầu
+                camera_process.kill()
             except Exception:
                 pass
         camera_process = None
-    print("🔒 [FFMPEG_LIVE]: Đã tắt Camera phần cứng thành công.")
+        
+    print("🔒 [FFMPEG_LIVE]: Đã đóng toàn bộ tiến trình liên quan đến Camera.")
 
 # -----------------------------------------------------------------
 # 4. HÀM ĐIỀU PHỐI TỔNG CHẠY CAMERA (ON/OFF)
@@ -130,7 +153,7 @@ def camera_control(state, resolution="640x480"):
         if is_camera_streaming:
             return "Thông báo: Hệ thống Camera Mắt thần đang hoạt động sẵn rồi."
         
-        # Khởi chạy một Thread ngầm để chạy lệnh FFmpeg, tránh làm đóng băng luồng nhận MQTT mẹ
+        # Khởi chạy một Thread ngầm để chạy lệnh, tránh làm đóng băng luồng nhận MQTT mẹ
         t = threading.Thread(target=_ffmpeg_stream_worker, args=(res_clean,))
         t.daemon = True
         t.start()
@@ -150,7 +173,7 @@ def register(actions_map):
     actions_map["SetStreamingServer"] = {
         "func": set_streaming_server,
         "params": "text",
-        "example": 'SetStreamingServer("rtsp://media.toolhub.app/tjbot1/eye")'
+        "example": 'SetStreamingServer("rtsp://TRAIN.toolhub.app:8554/live/tjbot1/eye")'
     }
        
     actions_map["SetVideoStream"] = {
@@ -163,5 +186,12 @@ def register(actions_map):
         "func": camera_control,
         "params": "state, resolution='640x480'",
         "example": 'Camera("on", "640x480")'
+    }
+    
+    # BỔ SUNG: Đăng ký hàm kiểm tra trạng thái camera lên Web điều khiển
+    actions_map["CheckCamera"] = {
+        "func": check_camera_status,
+        "params": "",
+        "example": 'CheckCamera()'
     }
     print("=> Mô-đun CAM_FEATURE đã đăng ký thành công danh sách lệnh! 👁️")
