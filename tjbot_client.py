@@ -7,10 +7,10 @@ import subprocess
 import urllib.request
 from paho.mqtt import client as mqtt_client
 import psutil  
-from paho.mqtt.subscribeoptions import SubscribeOptions
-import threading           
+from paho.mqtt.subscribeoptions import SubscribeOptions      
 from button_genture import watch_hardware_button
 import ast   # Phân tích cú pháp trong mqtt payload
+import signal  # bắt sự kiện dừng service
 
 # 🔥 ĐÃ ĐỔI: Import cấu hình và hàm phản hồi từ module mqtt dùng chung
 from features.mqtt import BROKER, PORT, USER, PASSWORD, TOPIC_PUB, BOT_ID, mqtt_response
@@ -205,21 +205,66 @@ def welcome():
             print("⚠️ [WELCOME CẢNH BÁO]: Không tìm thấy hàm text_to_speak trong module audio_feature!")
     except Exception as e:
         print(f"❌ [WELCOME LỖI] -> Lỗi phát sinh khi robot tập nói lời chào: {e}")
-        
-def run():
-    try:
-        watch_hardware_button()
-    except Exception as e:
-        print(f"⚠️ Không thể bật nút bấm: {e}", flush=True)
 
-    welcome()
+
+def callback_trigger_hardware(command_string):
+    """Hàm callback số 1: Xử lý kích hoạt phần cứng (mở Mic/Loa)"""
+    print(f"⚙️ [CALLBACK 1]: Đang thực thi lệnh phần cứng -> {command_string}")
+    # Logic xử lý lệnh phân tích cú pháp ở đây (ví dụ gọi mic_feature)
+    # ...
     
-    client = connect_mqtt()
-    client.on_message = on_message
-    client.loop_forever()
-    
+def callback_log_system(command_string):
+    """Hàm callback số 2: Ghi log lịch sử hoạt động vào file hoặc database"""
+    print(f"📝 [CALLBACK 2]: Đang lưu log hệ thống -> Robot nhận lệnh '{command_string}'")
+    # Logic ghi file log ở đây
+    # ...
+        
 if __name__ == '__main__':
+    client_instance = None
+
+    # Tạo hàm callback xử lý khi nhận lệnh STOP từ systemd (SIGTERM) hoặc Ctrl+C (SIGINT)
+    def sigterm_handler(signum, frame):
+        print("\n🛑 [SYSTEMD] Nhận tín hiệu dừng hệ thống (SIGTERM/SIGINT)!")
+        global client_instance
+        if client_instance:
+            print("🔄 Đang chủ động ngắt kết nối MQTT...")
+            client_instance.disconnect() # Lệnh này sẽ làm gãy vòng lặp loop_forever() một cách an toàn
+            print("👋 Đã ngắt kết nối MQTT thành công.")
+
+    # Đăng ký hàm lắng nghe tín hiệu với hệ điều hành
+    signal.signal(signal.SIGTERM, sigterm_handler)
+    signal.signal(signal.SIGINT, sigterm_handler)
+
     try:
-        run()
+        # Cập nhật để gán client vào biến toàn cục giúp hàm sigterm_handler có thể gọi được
+        try:
+            myjobs = [
+                {"name": "Luyện tập", "func": callback_trigger_hardware},
+                {"name": "Hỏi đáp tư vấn", "func": callback_log_system}
+            ]
+            watch_hardware_button(action_callbacks=myjobs)
+        except Exception as e:
+            print(f"⚠️ Không thể bật nút bấm: {e}", flush=True)
+
+        welcome()
+        
+        # Bóc tách đoạn run() cũ ra đây để lấy biến client_instance
+        client_instance = connect_mqtt()
+        client_instance.on_message = on_message
+        
+        print("🤖 [TJBOT] Hệ thống đã sẵn sàng và đang lắng nghe MQTT...")
+        client_instance.loop_forever() # Vòng lặp chặn, nhưng giờ có thể bẻ gãy bằng client.disconnect()
+        
+    except SystemExit:
+        print("ℹ️ Tiến trình kết thúc thông qua SystemExit.")
+    except Exception as e:
+        print(f"❌ Lỗi phát sinh trong luồng chính: {e}")
     finally:
-        GPIO.cleanup() # Giải phóng chân GPIO khi tắt phần mềm an toàn
+        print("🧹 [CLEANUP] Đang giải phóng chân GPIO và dọn dẹp tài nguyên...")
+        try:
+            # Lưu ý: File của bạn đang thiếu import GPIO, đảm bảo bạn đã import RPi.GPIO as GPIO ở đầu file nếu dùng lệnh này
+            import RPi.GPIO as GPIO
+            GPIO.cleanup() 
+            print("✅ [CLEANUP SUCCESSFULLY] Hệ thống đã tắt an toàn.")
+        except:
+            print("⚠️ Không thể dọn dẹp GPIO (Có thể chưa khởi tạo hoặc thiếu thư viện).")

@@ -1,18 +1,19 @@
 <div class="card p-4 shadow-sm border-0 bg-white h-100">
-    <div class="d-flex align-items-center mb-3">
-        <div class="p-2 rounded me-3" style="background-color: #fff4e6; color: #fd7e14;">
-            <i class="fa-solid fa-microphone fa-2x"></i>
-        </div>
-        <div>
-            <h5 class="fw-bold text-dark mb-0">HỆ THỐNG THU ÂM (MICROPHONE)</h5>
-            <small class="text-muted">Thu nhận tín hiệu âm thanh trực tiếp từ môi trường xung quanh</small>
+    <div class="d-flex align-items-center mb-3 flex-wrap gap-3">
+        <div class="d-flex align-items-center">
+            <div class="p-2 rounded me-3" style="background-color: #fff4e6; color: #fd7e14;">
+                <i class="fa-solid fa-microphone fa-2x"></i>
+            </div>
+            <div>
+                <h5 class="fw-bold text-dark mb-0">HỆ THỐNG THU ÂM (MICROPHONE)</h5>
+                <small class="text-muted">Thu nhận tín hiệu âm thanh trực tiếp từ môi trường xung quanh</small>
+            </div>
         </div>
     </div>
 
-    <div class="row align-items-center mb-3" style="table-layout: fixed; width: 100%; margin: 0;">
-        <div class="col-auto text-center border-end pe-4 me-2">
-            <div class="p-2 bg-white rounded d-flex flex-column align-items-center justify-content-center border"
-                style="min-width: 150px; min-height: 145px;">
+    <div class="d-flex flex-wrap gap-3 align-items-center mb-4">
+        <div class="text-center border-end pe-3 me-1 mx-auto mx-sm-0" style="min-width: 150px;">
+            <div class="p-2 bg-white rounded d-flex flex-column align-items-center justify-content-center border" style="height: 145px;">
                 <div class="mic-disk-ui" id="diskRecord">
                     <i class="fa-solid fa-microphone-lines" id="iconRecordMic"></i>
                 </div>
@@ -20,30 +21,24 @@
             </div>
         </div>
 
-        <div class="col" style="min-width: 0; overflow: hidden;">
+        <div class="flex-grow-1" style="flex-basis: 220px; min-width: 0;">
             <div class="mb-2">
                 <h6 class="fw-bold text-dark mb-0" style="font-size: 0.9rem;">1. NGHE VÀ NÓI NHẠI</h6>
-                <small class="text-danger fw-semibold" style="font-size: 0.72rem;">👉 Vui lòng nói thật gần sát
-                    Microphone của TJBot</small>
+                <small class="text-danger fw-semibold" style="font-size: 0.72rem;">👉 Vui lòng nói thật gần sát Microphone của TJBot</small>
             </div>
-            <div class="row g-2 align-items-center bg-light p-2 rounded border">
-                <div class="col-4">
-                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Thời gian nghe
-                        (s):</label>
-                    <input type="number" id="numRecordTimeout" class="form-control form-control-sm text-center"
-                        value="5" min="2" max="20" style="font-size: 0.8rem;">
+            
+            <div class="d-flex flex-wrap gap-2 align-items-end bg-light p-2 rounded border">
+                <div class="flex-grow-1" style="flex-basis: 60px;">
+                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Thời gian (s):</label>
+                    <input type="number" id="numRecordTimeout" class="form-control form-control-sm text-center" value="5" min="2" max="20" style="font-size: 0.8rem;">
                 </div>
-                <div class="col-4">
-                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Hành động:</label>
-                    <button class="btn btn-warning btn-sm fw-bold w-100 text-white" style="font-size: 0.8rem;"
-                        onclick="triggerRecord(true)">
+                <div class="flex-grow-1" style="flex-basis: 120px;">
+                    <button class="btn btn-warning btn-sm fw-bold w-100 text-white" style="font-size: 0.8rem;" onclick="triggerRecord(true)">
                         <i class="fa-solid fa-ear-listen me-1"></i> Nghe và nói nhại
                     </button>
                 </div>
-                <div class="col-4">
-                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Ngắt:</label>
-                    <button class="btn btn-secondary btn-sm fw-bold w-100" style="font-size: 0.8rem;"
-                        onclick="triggerRecord(false)">
+                <div class="flex-grow-0">
+                    <button class="btn btn-secondary btn-sm fw-bold px-3" style="font-size: 0.8rem;" onclick="triggerRecord(false)">
                         <i class="fa-solid fa-stop me-1"></i> Dừng
                     </button>
                 </div>
@@ -51,12 +46,11 @@
         </div>
     </div>
 
-    <hr class="my-3 text-muted opacity-50" style="border-top: 1px dashed #ccc;">
+    <hr class="my-4 text-muted opacity-50" style="border-top: 2px dashed #ccc;">
 
-    <div class="row align-items-center" style="table-layout: fixed; width: 100%; margin: 0;">
-        <div class="col-auto text-center border-end pe-4 me-2">
-            <div class="p-2 bg-white rounded d-flex flex-column align-items-center justify-content-center border"
-                style="min-width: 150px; min-height: 255px;">
+    <div class="d-flex flex-wrap gap-3 align-items-center">
+        <div class="text-center border-end pe-3 me-1 mx-auto mx-sm-0" style="min-width: 150px;">
+            <div class="p-2 bg-white rounded d-flex flex-column align-items-center justify-content-center border" style="height: 255px;">
                 <div class="mic-disk-ui" id="diskListen">
                     <i class="fa-solid fa-brain" id="iconListenMic"></i>
                 </div>
@@ -64,54 +58,41 @@
             </div>
         </div>
 
-        <div class="col" style="min-width: 0; overflow: hidden;">
+        <div class="flex-grow-1" style="flex-basis: 220px; min-width: 0;">
             <div class="mb-2">
                 <h6 class="fw-bold text-dark mb-0" style="font-size: 0.9rem;">2. NGHE HIỂU (AI RECOGNITION)</h6>
-                <small class="text-muted" style="font-size: 0.72rem;">Hệ thống nhận diện giọng nói và chuyển đổi thành
-                    văn bản</small>
+                <small class="text-muted" style="font-size: 0.72rem;">Hệ thống nhận diện giọng nói và chuyển đổi thành văn bản</small>
             </div>
 
             <div class="bg-light p-2 rounded border d-flex flex-column gap-2">
                 <div>
-                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">KẾT QUẢ NHẬN DIỆN
-                        VĂN BẢN (SPEECH TO TEXT):</label>
-                    <textarea id="txtS2tOutput" class="form-control form-control-sm bg-white fw-semibold text-dark"
-                        rows="3" style="font-size: 0.82rem; border-color: #a5d8ff;" readonly
-                        placeholder="Đang đợi Robot lắng nghe và dịch giọng nói..."></textarea>
+                    <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">KẾT QUẢ NHẬN DIỆN VĂN BẢN (SPEECH TO TEXT):</label>
+                    <textarea id="txtS2tOutput" class="form-control form-control-sm bg-white fw-semibold text-dark" rows="3" style="font-size: 0.82rem; border-color: #a5d8ff;" readonly placeholder="Đang đợi Robot lắng nghe và dịch giọng nói..."></textarea>
                 </div>
 
-                <div class="row g-2 align-items-center">
-                    <div class="col-3">
-                        <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Ngôn
-                            ngữ:</label>
-                        <select id="selListenLang" class="form-select form-select-sm"
-                            style="font-size: 0.8rem; cursor: pointer;">
+                <div class="d-flex flex-wrap gap-2 align-items-end">
+                    <div class="flex-grow-1" style="flex-basis: 90px;">
+                        <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Ngôn ngữ:</label>
+                        <select id="selListenLang" class="form-select form-select-sm" style="font-size: 0.8rem; cursor: pointer;">
                             <option value="vi-VN" selected>🇻🇳 Tiếng Việt</option>
                             <option value="en-US">🇺🇸 English</option>
                             <option value="ja-JP">🇯🇵 Japanese</option>
                         </select>
                     </div>
 
-                    <div class="col-3">
-                        <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Thời gian nghe
-                            (s):</label>
-                        <input type="number" id="numListenTimeout" class="form-control form-control-sm text-center"
-                            value="5" min="2" max="20" style="font-size: 0.8rem;">
+                    <div class="flex-grow-1" style="flex-basis: 60px;">
+                        <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Thời gian (s):</label>
+                        <input type="number" id="numListenTimeout" class="form-control form-control-sm text-center" value="5" min="2" max="20" style="font-size: 0.8rem;">
                     </div>
 
-                    <div class="col-3">
-                        <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Hành
-                            động:</label>
-                        <button class="btn btn-info btn-sm fw-bold w-100 text-white" style="font-size: 0.8rem;"
-                            onclick="triggerListen(true)">
+                    <div class="flex-grow-1" style="flex-basis: 80px;">
+                        <button class="btn btn-info btn-sm fw-bold w-100 text-white" style="font-size: 0.8rem;" onclick="triggerListen(true)">
                             <i class="fa-solid fa-bolt me-1"></i> Nghe
                         </button>
                     </div>
 
-                    <div class="col-3">
-                        <label class="text-muted small fw-bold d-block mb-1" style="font-size:0.65rem;">Ngắt:</label>
-                        <button class="btn btn-secondary btn-sm fw-bold w-100" style="font-size: 0.8rem;"
-                            onclick="triggerListen(false)">
+                    <div class="flex-grow-0">
+                        <button class="btn btn-secondary btn-sm fw-bold px-3" style="font-size: 0.8rem;" onclick="triggerListen(false)">
                             <i class="fa-solid fa-stop me-1"></i> Dừng
                         </button>
                     </div>
@@ -138,73 +119,40 @@
         transition: all 0.3s ease;
     }
 
-    #iconRecordMic {
-        font-size: 2.6rem;
-        color: #fd7e14;
-    }
+    #iconRecordMic { font-size: 2.6rem; color: #fd7e14; }
+    #iconListenMic { font-size: 2.6rem; color: #15aabf; }
 
-    #iconListenMic {
-        font-size: 2.6rem;
-        color: #15aabf;
-    }
-
-    .listening-pulse-orange {
-        animation: audioPulseOrange 1.2s infinite ease-in-out;
-        color: #e67e22 !important;
-    }
-
+    .listening-pulse-orange { animation: audioPulseOrange 1.2s infinite ease-in-out; color: #e67e22 !important; }
     @keyframes audioPulseOrange {
-        0% {
-            transform: scale(1);
-            filter: drop-shadow(0 0 2px rgba(253, 126, 20, 0.2));
-        }
-
-        50% {
-            transform: scale(1.12);
-            filter: drop-shadow(0 0 12px rgba(253, 126, 20, 0.6));
-        }
-
-        100% {
-            transform: scale(1);
-            filter: drop-shadow(0 0 2px rgba(253, 126, 20, 0.2));
-        }
+        0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(253, 126, 20, 0.2)); }
+        50% { transform: scale(1.12); filter: drop-shadow(0 0 12px rgba(253, 126, 20, 0.6)); }
+        100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(253, 126, 20, 0.2)); }
     }
 
-    .listening-pulse-blue {
-        animation: audioPulseBlue 1.2s infinite ease-in-out;
-        color: #0b7285 !important;
-    }
-
+    .listening-pulse-blue { animation: audioPulseBlue 1.2s infinite ease-in-out; color: #0b7285 !important; }
     @keyframes audioPulseBlue {
-        0% {
-            transform: scale(1);
-            filter: drop-shadow(0 0 2px rgba(21, 170, 191, 0.2));
-        }
-
-        50% {
-            transform: scale(1.12);
-            filter: drop-shadow(0 0 12px rgba(21, 170, 191, 0.6));
-        }
-
-        100% {
-            transform: scale(1);
-            filter: drop-shadow(0 0 2px rgba(21, 170, 191, 0.2));
-        }
+        0% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(21, 170, 191, 0.2)); }
+        50% { transform: scale(1.12); filter: drop-shadow(0 0 12px rgba(21, 170, 191, 0.6)); }
+        100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(21, 170, 191, 0.2)); }
     }
 
-    #diskRecord:has(.listening-pulse-orange) {
-        background: #fff9db !important;
-        border-color: #ffe066 !important;
-    }
+    #diskRecord:has(.listening-pulse-orange) { background: #fff9db !important; border-color: #ffe066 !important; }
+    #diskListen:has(.listening-pulse-blue) { background: #e3faf2 !important; border-color: #96f2d7 !important; }
 
-    #diskListen:has(.listening-pulse-blue) {
-        background: #e3faf2 !important;
-        border-color: #96f2d7 !important;
+    /* Xử lý đường kẻ dọc thông minh khi giao diện bị bóp nhỏ trên mobile */
+    @media (max-width: 575.98px) {
+        .border-end {
+            border-right: none !important;
+            border-bottom: 1px dashed #eee !important;
+            padding-right: 0 !important;
+            padding-bottom: 1rem !important;
+            margin-right: 0 !important;
+            margin-bottom: 0.5rem !important;
+        }
     }
 </style>
 
 <script>
-    // Hàm kiểm tra kết nối MQTT
     function checkMqttConnection() {
         if (typeof mqttClient !== "undefined" && mqttClient && typeof mqttClient.isConnected === "function") {
             return mqttClient.isConnected();
@@ -257,7 +205,6 @@
             cmd = `Listen(on, ${timeout}, ${language})`;
             if (log) log.innerHTML = `Lệnh: <span class="text-info">${cmd}</span>`;
 
-            // Tắt các hoạt họa cũ và kích hoạt nhấp nháy XANH DƯƠNG cho bộ não
             window.stopAllMicAnimations();
             if (icon) icon.classList.add('listening-pulse-blue');
         } else {
@@ -280,20 +227,15 @@
         if (i2) i2.classList.remove('listening-pulse-blue');
     };
 
-    // Hàm toàn cục xử lý bóc tách chuỗi s2t từ MQTT trả về
     window.handleMqttSpeechToText = function (payload) {
         console.log("[MQTT Rx Speech-to-Text Raw]:", payload);
 
         if (payload.includes("s2t=")) {
-            // Cắt chuỗi lấy chuẩn phần nội dung phía sau "s2t="
             const textResult = payload.split("s2t=")[1];
             const outTxt = document.getElementById('txtS2tOutput');
 
             if (outTxt) {
-                // Tác động trực tiếp lên DOM để cập nhật chữ lên giao diện
                 outTxt.value = textResult.trim();
-
-                // Xử lý mượt mà: Đợi 100ms sau khi chữ lên màn hình thì mới tắt hiệu ứng nhấp nháy
                 setTimeout(() => {
                     window.stopAllMicAnimations();
                 }, 100);

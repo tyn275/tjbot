@@ -1,26 +1,17 @@
 # button_genture.py
-import enum
 import time
 import threading
+import RPi.GPIO as GPIO
 import subprocess
 import socket
 import psutil
-import RPi.GPIO as GPIO
 
 from features import audio_feature
 from features.mqtt import mqtt_response
 
-# 1. ĐỊNH NGHĨA BIẾN ACTIVITY_MODE DẠNG ENUM
-class ActivityMode(enum.Enum):
-    MODE_GYM = 1
-    MODE_ASKANS = 2
-
-# Chuyển đổi Enum thành một danh sách (List) cố định để áp dụng thuật toán chia lấy dư
-MODES_LIST = list(ActivityMode)
-
-# Khởi tạo giá trị ban đầu cho Mode hoạt động
-CURRENT_ACTIVITY_MODE = ActivityMode.MODE_GYM
 BUTTON_PIN = 26  
+# Biến lưu vị trí chế độ hiện tại trong danh sách
+CURRENT_CALLBACK_INDEX = 0
 
 # --- HÀM TRỢ GIÚP LẤY THÔNG TIN MẠNG (ĐỌC CẢ IP VÀ SSID TÊN WIFI) ---
 def get_network_speech_text():
@@ -63,72 +54,87 @@ def get_network_speech_text():
     )
     return speech_text
 
-
-def watch_hardware_button():
-    global CURRENT_ACTIVITY_MODE
+def watch_hardware_button(action_callbacks=None): 
+    """
+    Hàm kiểm soát nút bấm cứng chạy vòng lặp tuần hoàn qua mảng callback.
+    :param action_callbacks: Mảng các dictionary chứa thông tin cấu hình dịch vụ.
+    """
+    global CURRENT_CALLBACK_INDEX
     
-    # Thiết lập cấu hình chân GPIO an toàn
+    # Cấu hình GPIO
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    print(f"🔘 [NÚT CỨNG] Đã kích hoạt GPIO{BUTTON_PIN} (PULL-UP) thành công.", flush=True)
+    
+    # Nếu không truyền mảng callback nào, nút bấm sẽ không làm gì cả
+    if not action_callbacks or not isinstance(action_callbacks, list):
+        print("⚠️ [NÚT CỨNG]: Không có mảng callback hợp lệ nào được cấu hình!")
+        return
+
+    print(f"🏁 [NÚT CỨNG]: Hệ thống nút bấm sẵn sàng với {len(action_callbacks)} chế độ động.")
 
     def button_worker():
-        global CURRENT_ACTIVITY_MODE
         while True:
-            # Khi nút bấm được nhấn xuống (Mức thấp LOW do mạch PULL-UP)
             if GPIO.input(BUTTON_PIN) == GPIO.LOW:
-                start_press_time = time.time()
-                has_triggered_special = False # Cờ đánh dấu đã kích hoạt chế độ đặc biệt 5s chưa
-                
-                # Vòng lặp quét liên tục khi nút bấm ĐANG ĐƯỢC GIỮ
+                time.sleep(0.05) # Chống rung phím (Debounce)
+                if GPIO.input(BUTTON_PIN) == GPIO.LOW:
+                    start_press_time = time.time()
+                    has_triggered_special = False # Cờ đánh dấu đã kích hoạt chế độ đặc biệt 5s chưa
+                    
+                    # Vòng lặp quét liên tục khi nút bấm ĐANG ĐƯỢC GIỮ
+                    while GPIO.input(BUTTON_PIN) == GPIO.LOW:
+                        current_duration = time.time() - start_press_time
+                        
+                        # 🔥 CẢI TIẾN: Đạt đủ 3 giây phát lệnh LUÔN, KHÔNG CẦN đợi nhả tay
+                        if current_duration >= 3.0 and not has_triggered_special:
+                            print(f"\n🚨 [NÚT CỨNG]: Đã giữ liên tục {current_duration:.1f}s -> Đọc thông tin mạng ngay lập tức!", flush=True)
+                            
+                            network_text = get_network_speech_text()
+                            print(f"🔊 [NÚT CỨNG LOG]: {network_text}")
+                            mqtt_response(network_text)
+                            audio_feature.text_to_speak(network_text, lang="vi")
+                            
+                            has_triggered_special = True # Đánh dấu đã chạy xong, không chạy lại lặp đi lặp lại khi vẫn đang giữ nút
+                        
+                        time.sleep(0.05) # Ngủ ngắn để tiết kiệm CPU và cập nhật thời gian thực
+                    
+                    # 2. Người dùng ĐÃ NHẢ TAY RA $\rightarrow$ Tính toán xử lý cho cú BẤM NHANH xoay vòng
+                    press_total_time = time.time() - start_press_time
+                    
+                                    
+                    # Nếu chu kỳ bấm giữ đã kích hoạt chế độ 3 giây rồi thì nhả ra bỏ qua, không tính là bấm nhanh
+                    if has_triggered_special:
+                        print("ℹ️ [NÚT CỨNG]: Đã nhả tay sau khi chạy xong chế độ đặc biệt.", flush=True)
+                    
+                    # Ngược lại, nếu nhả tay sớm (Bấm nhanh > 0.1s chống nhiễu và dưới 1.5s)
+                    elif 0.1 < press_total_time < 1.5:                                
+                        # 💡 THUẬT TOÁN TOÁN HỌC XOAY VÒNG DỰA TRÊN CHIỀU DÀI MẢNG CALLBACK:
+                        # Mỗi lần bấm, tăng index lên 1 và chia lấy dư cho tổng số lượng hàm trong mảng
+                        global CURRENT_CALLBACK_INDEX
+                        CURRENT_CALLBACK_INDEX = (CURRENT_CALLBACK_INDEX + 1) % len(action_callbacks)
+                        
+                        # Lấy ra cấu hình của chế độ hiện tại
+                        current_mode_config = action_callbacks[CURRENT_CALLBACK_INDEX]
+                        
+                        mode_name = current_mode_config.get("name", f"Chế độ {CURRENT_CALLBACK_INDEX}")
+                        target_function = current_mode_config.get("func")
+                        
+                        print(f"\n🔄 [NÚT CỨNG]: Đang chuyển sang -> {mode_name}", flush=True)
+                        
+                        # Đọc ra loa chế độ làm việc
+                        audio_feature.text_to_speak("Đã nhận việc " + mode_name, lang="vi")
+                        
+                        # KÍCH HOẠT HÀM SỰ KIỆN ĐƯỢC ĐÍNH KÈM
+                        if target_function and callable(target_function):
+                            try:
+                                # Thực thi hàm và truyền tên chế độ sang làm tham số nếu cần
+                                target_function(mode_name)
+                            except Exception as e:
+                                print(f"❌ Lỗi khi thực thi hàm callback của {mode_name}: {e}")
+                        else:
+                            print(f"⚠️ Không tìm thấy hàm xử lý hợp lệ cho: {mode_name}")
+                        
                 while GPIO.input(BUTTON_PIN) == GPIO.LOW:
-                    current_duration = time.time() - start_press_time
-                    
-                    # 🔥 CẢI TIẾN: Đạt đủ 3 giây phát lệnh LUÔN, KHÔNG CẦN đợi nhả tay
-                    if current_duration >= 3.0 and not has_triggered_special:
-                        print(f"\n🚨 [NÚT CỨNG]: Đã giữ liên tục {current_duration:.1f}s -> Đọc thông tin mạng ngay lập tức!", flush=True)
-                        
-                        network_text = get_network_speech_text()
-                        print(f"🔊 [NÚT CỨNG LOG]: {network_text}")
-                        mqtt_response(network_text)
-                        audio_feature.text_to_speak(network_text, lang="vi")
-                        
-                        has_triggered_special = True # Đánh dấu đã chạy xong, không chạy lại lặp đi lặp lại khi vẫn đang giữ nút
-                    
-                    time.sleep(0.05) # Ngủ ngắn để tiết kiệm CPU và cập nhật thời gian thực
-                
-                # 2. Người dùng ĐÃ NHẢ TAY RA $\rightarrow$ Tính toán xử lý cho cú BẤM NHANH xoay vòng
-                press_total_time = time.time() - start_press_time
-                
-                # Nếu chu kỳ bấm giữ đã kích hoạt chế độ 3 giây rồi thì nhả ra bỏ qua, không tính là bấm nhanh
-                if has_triggered_special:
-                    print("ℹ️ [NÚT CỨNG]: Đã nhả tay sau khi chạy xong chế độ đặc biệt.", flush=True)
-                
-                # Ngược lại, nếu nhả tay sớm (Bấm nhanh > 0.1s chống nhiễu và dưới 1.5s)
-                elif 0.1 < press_total_time < 1.5:
-                    # Thuật toán toán học chia lấy dư để tự động xoay vòng trạng thái Enum
-                    current_idx = MODES_LIST.index(CURRENT_ACTIVITY_MODE)
-                    
-                    # 2. Áp dụng công thức chia lấy dư toán học (%) để xoay vòng tuần hoàn index
-                    next_idx = (current_idx + 1) % len(MODES_LIST)
-                    CURRENT_ACTIVITY_MODE = MODES_LIST[next_idx]
-                    
-                    # Thân hàm chỉ kiểm tra trạng thái cố định để xử lý logic hành động
-                    if CURRENT_ACTIVITY_MODE == ActivityMode.MODE_GYM:
-                        res = "Chế độ phòng tập"
-                        print(f"\n🔄 [NÚT CỨNG]: Chuyển sang -> 🤖 {res}", flush=True)
-                        mqtt_response(res)
-                        audio_feature.text_to_speak(res, lang="vi")
-                        # TODO: Bạn chèn thêm logic xử lý riêng cho Phòng tập (Gym) tại đây
-                        
-                    elif CURRENT_ACTIVITY_MODE == ActivityMode.MODE_ASKANS:
-                        res = "Chế độ hỏi đáp"
-                        print(f"\n🔄 [NÚT CỨNG]: Chuyển sang -> 🧠 {res}", flush=True)
-                        mqtt_response(res)
-                        audio_feature.text_to_speak(res, lang="vi")
-                        # TODO: Bạn chèn thêm logic xử lý riêng cho Hỏi đáp (AskAns) tại đây
-                        
-            time.sleep(0.1) 
-
+                    time.sleep(0.1) # Chờ người dùng nhả tay ra khỏi nút bấm
+            time.sleep(0.1)
     t = threading.Thread(target=button_worker, daemon=True)
-    t.start()
+    t.start()        
