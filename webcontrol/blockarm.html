@@ -121,7 +121,7 @@
             </div>
 
             <div class="bg-light p-2 rounded border">
-                <div class="row row-cols-1 row-cols-sm-3 g-2 align-items-end">
+                <div class="row row-cols-1 row-cols-sm-4 g-2 align-items-end">
                     <div class="col">
                         <span class="text-muted small fw-bold d-block mb-1" style="font-size: 0.65rem;">Lần:</span>
                         <input type="number" id="waveTimes" class="form-control form-control-sm text-center" value="1" min="1" max="20" style="font-size: 0.8rem;">
@@ -137,7 +137,13 @@
 
                     <div class="col">
                         <button class="btn btn-warning btn-sm fw-bold w-100 text-white" style="font-size: 0.8rem; white-space: normal;" onclick="triggerWaveHand()">
-                            Vẫy cái tay
+                            Vẫy tay
+                        </button>
+                    </div>
+
+                    <div class="col">
+                        <button class="btn btn-danger btn-sm fw-bold w-100" style="font-size: 0.8rem; white-space: normal;" onclick="stopWaveHand()">
+                            <i class="fa-solid fa-hand-slash me-1"></i> Dừng
                         </button>
                     </div>
                 </div>
@@ -308,6 +314,15 @@
         const command = `Wavehand(${speed}, ${times})`;
         document.getElementById('lblArmCommandLog').innerText = `Lệnh xuất: ${command}`;
         
+        sendMQTTCommand(command);
+    }
+
+    /* 💡 BỔ SUNG MỚI: Hàm xử lý kích hoạt lệnh dừng vẫy tay */
+    function stopWaveHand() {
+        const command = `Wavehand(off)`;
+        document.getElementById('lblArmCommandLog').innerText = `Lệnh xuất: ${command}`;
+        
+        // Gửi lệnh thô, hàm sendMQTTCommand tối ưu của bạn sẽ tự động chuyển thành Wavehand("off") trước khi gửi lên mạng
         sendMQTTCommand(command);
     }
 

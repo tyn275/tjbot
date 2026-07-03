@@ -12,6 +12,9 @@ SERVO_PIN = 7   # ứng với pin 26
 # Biến toàn cục để ghi nhớ góc quay cuối cùng nhằm tái định vị chính xác khi phục hồi lực (attach)
 last_known_angle = 0
 
+# 💡 BIẾN CỜ TOÀN CỤC: Dùng để hủy tiến trình vẫy tay ngay lập tức khi có lệnh dừng
+stop_wave_flag = False
+
 try:
     # Nới rộng xung ra góc cực đại: 0.45ms (0.00045) đến 2.45ms (0.00245)
     servo = AngularServo(
@@ -63,25 +66,66 @@ def muscle_control(state="on"):
     else:
         return "ERROR: Tham số không hợp lệ! Chỉ chấp nhận 'on' hoặc 'off'."
 
+def _interruptible_wave_sleep(duration):
+    """💡 Hàm ngủ chia nhỏ: Cho phép cánh tay thoát trạng thái chờ ngay lập tức nếu phát hiện cờ dừng bật"""
+    global stop_wave_flag
+    step = 0.01
+    elapsed = 0
+    while elapsed < duration:
+        if stop_wave_flag:
+            return True
+        time.sleep(step)
+        elapsed += step
+    return False
+
 def wave_hand(speed="fast", times=3):
-    """Hàm điều khiển robot vẫy tay qua lại"""
-    global last_known_angle
-    print(f"-> [TÍNH NĂNG CÁNH TAY] wave_hand: Speed={speed}, Times={times}")
+    """Hàm điều khiển robot vẫy tay qua lại (Hỗ trợ ngắt khẩn cấp)"""
+    global last_known_angle, stop_wave_flag
+    
+    # Chuẩn hóa chuỗi tham số speed phòng trường hợp nhận từ JS bọc ngoặc
+    speed_str = str(speed).lower().strip().strip("'\"")
+    print(f"-> [TÍNH NĂNG CÁNH TAY] wave_hand: Speed={speed_str}, Times={times}")
+    
     if not servo:
         return "ERROR: Servo chưa được khởi tạo!"
 
-    delay = 0.2 if speed.lower() == "fast" else 0.5
+    # -----------------------------------------------------------------
+    # 1. XỬ LÝ LỆNH DỪNG VẪY TAY KHẨN CẤP
+    # -----------------------------------------------------------------
+    if speed_str == "off":
+        stop_wave_flag = True  # Kích hoạt cờ ngắt toàn cục
+        servo.angle = 0        # Hạ tay về vị trí trung tâm ngay lập tức
+        last_known_angle = 0   # Cập nhật lại bộ nhớ góc vật lý
+        return "SUCCESS: Đã phát lệnh DỪNG vẫy tay khẩn cấp và trả Servo về góc 0"
+
+    # -----------------------------------------------------------------
+    # 2. KHỞI CHẠY TIẾN TRÌNH VẪY TAY (CHẠY NGẦM TRONG THREAD)
+    # -----------------------------------------------------------------
+    # Hạ cờ dừng về False để cho phép chu kỳ mới hoạt động ổn định
+    stop_wave_flag = False
+    
+    delay = 0.2 if speed_str == "fast" else 0.5
     try:
         times = int(times)
-        for _ in range(times):
+        for i in range(times):
+            # Kiểm tra cờ dừng trước khi đổi góc sang phải
+            if stop_wave_flag: 
+                break
             servo.angle = 45   # Quay sang phải
-            time.sleep(delay)
+            if _interruptible_wave_sleep(delay): 
+                break
+                
+            # Kiểm tra cờ dừng trước khi đổi góc sang trái
+            if stop_wave_flag: 
+                break
             servo.angle = -45  # Quay sang trái
-            time.sleep(delay)
+            if _interruptible_wave_sleep(delay): 
+                break
         
-        servo.angle = 0 # Đưa tay về vị trí chính giữa khi xong
-        last_known_angle = 0 # Cập nhật lại góc bộ nhớ
-        return f"SUCCESS: Đã vẫy tay {times} lần."
+        # Đưa tay về vị trí chính giữa khi xong hoặc khi bị ngắt nửa chừng
+        servo.angle = 0 
+        last_known_angle = 0 
+        return f"SUCCESS: Tiến trình vẫy tay đã kết thúc hoặc được dừng an toàn."
     except ValueError:
         return "ERROR: Tham số 'times' phải là số nguyên!"
 
@@ -156,7 +200,11 @@ def selftest():
 
 # Đăng ký hàm với hệ thống MQTT
 def register(actions_map):
-    actions_map["Wavehand"] = {"func": wave_hand, "params": "speed=fast|slow, times=3", "example": "Wavehand(slow, 5)"}
+    actions_map["Wavehand"] = {
+        "func": wave_hand, 
+        "params": "speed=fast|slow|off, times=3", 
+        "example": 'Wavehand("slow", "5") , Wavehand("off") '
+    }
     actions_map["Arm"] = {"func": set_arm_angle, "params": "angle=0", "example": "Arm(45)"}
     
     # 🔥 ĐÃ ĐỔI: Đăng ký hàm Muscle duy nhất nhận tham số on/off theo yêu cầu của bạn
