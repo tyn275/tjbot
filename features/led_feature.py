@@ -1,32 +1,31 @@
 # features/led_feature.py
 import time
 import os
-import RPi.GPIO as GPIO
+import pigpio  # 💡 Thay thế RPi.GPIO bằng pigpio để băm xung phần cứng (DMA PWM)
 
 # -----------------------------------------------------------------
 # CẤU HÌNH PHẦN CỨNG (LED ONBOARD & LED RGB ĐẦU CATHODE CHUNG)
 # -----------------------------------------------------------------
 
-# 1. Cấu hình đường dẫn LED Onboard cũ
+# 1. Cấu hình đường dẫn LED Onboard hệ thống
 LED_PATH = "/sys/class/leds/led0/brightness"
 if not os.path.exists(LED_PATH):
     LED_PATH = "/sys/class/leds/ACT/brightness"
 
-# 2. Cấu hình chân GPIO cho LED RGB mới
-RED_PIN = 12   # Pin 32
-GREEN_PIN = 16 # pin 36
-BLUE_PIN = 21  # pin 40
+# 2. Cấu hình chân GPIO cho LED RGB mới (sử dụng số chân BCM)
+RED_PIN = 12   # GPIO 12 (Pin 32)
+GREEN_PIN = 16 # GPIO 16 (Pin 36)
+BLUE_PIN = 21  # GPIO 21 (Pin 40)
 
-# Khai báo các đối tượng điều xung PWM toàn cục
-pwm_R = None
-pwm_G = None
-pwm_B = None
+# Khởi tạo kết nối với tiến trình pigpio daemon
+pi = pigpio.pi()
+if not pi.connected:
+    print("❌ LỖI KHỞI ĐỘNG PIGPIO: Hãy chắc chắn bạn đã chạy lệnh 'sudo systemctl start pigpiod'!")
 
 # 💡 BIẾN CỜ TOÀN CỤC: Luồng ngầm (Async) sẽ liên tục đọc cờ này để tự dừng vòng lặp.
-# Lệnh đồng bộ (Sync) bắt đầu bằng chữ "s" sẽ làm nhiệm vụ thay đổi giá trị cờ này.
 stop_blink_flag = False
 
-# Bảng tên màu cơ bản đã ĐƯỢC CHUẨN HÓA về định dạng HEXCOLOR thống nhất
+# Bảng tên màu cơ bản định dạng HEXCOLOR
 COLOR_MAP = {
     "white":   "#ffffff",
     "red":     "#ff0000",
@@ -44,7 +43,7 @@ COLOR_MAP = {
 # -----------------------------------------------------------------
 
 def _write_led(value):
-    """Hàm nội bộ cũ để ghi giá trị 0 hoặc 1 vào file LED hệ thống"""
+    """Hàm nội bộ điều khiển LED Onboard hệ thống"""
     try:
         with open(LED_PATH, "w") as f:
             f.write(str(value))
@@ -54,60 +53,45 @@ def _write_led(value):
         return False
 
 def _init_gpio():
-    """Khởi tạo cấu hình các chân GPIO và kích hoạt chế độ băm xung PWM"""
-    global pwm_R, pwm_G, pwm_B
-    try:
-        if GPIO.getmode() is None:
-            GPIO.setmode(GPIO.BCM)
-        GPIO.setwarnings(False)
-        
-        GPIO.setup([RED_PIN, GREEN_PIN, BLUE_PIN], GPIO.OUT)
-        
-        if pwm_R is None:
-            pwm_R = GPIO.PWM(RED_PIN, 2000)
-            pwm_G = GPIO.PWM(GREEN_PIN, 2000)
-            pwm_B = GPIO.PWM(BLUE_PIN, 2000)
-            
-            pwm_R.start(0)
-            pwm_G.start(0)
-            pwm_B.start(0)
-        return True
-    except Exception as e:
-        print(f"-> [LỖI GPIO PWM]: Không thể cấu hình băm xung LED: {e}")
+    """Khởi tạo cấu hình băm xung phần cứng thông qua pigpio"""
+    if not pi.connected:
         return False
+    # pigpio quản lý tần số PWM cực kỳ ổn định (Đặt tần số 2000Hz cho cả 3 chân)
+    pi.set_PWM_frequency(RED_PIN, 2000)
+    pi.set_PWM_frequency(GREEN_PIN, 2000)
+    pi.set_PWM_frequency(BLUE_PIN, 2000)
+    return True
 
 def _hex_to_pwm_duty(hex_str):
-    """Chuyển đổi một chuỗi hex màu bất kỳ sang bộ ba tỷ lệ phần trăm PWM (dc_r, dc_g, dc_b)"""
+    """Chuyển đổi chuỗi HEX màu sang dải độ sáng phần cứng pigpio (0 - 255)"""
     hex_color = hex_str.lower().strip().lstrip("#")
     if len(hex_color) != 6 or not all(c in "0123456789abcdef" for c in hex_color):
         return None
     try:
+        # pigpio nhận giá trị Duty Cycle chuẩn từ 0 đến 255
         r_255 = int(hex_color[0:2], 16)
         g_255 = int(hex_color[2:4], 16)
         b_255 = int(hex_color[4:6], 16)
-        
-        dc_r = (r_255 / 255.0) * 100.0
-        dc_g = (g_255 / 255.0) * 100.0
-        dc_b = (b_255 / 255.0) * 100.0
-        return dc_r, dc_g, dc_b
+        return r_255, g_255, b_255
     except ValueError:
         return None
 
 def _write_head_rgb_pwm(dc_r, dc_g, dc_b):
-    """Hàm nội bộ thay đổi Duty Cycle (0.0 - 100.0) của 3 kênh để đổi màu mịn"""
+    """Ghi trực tiếp giá trị độ sáng (0-255) xuống chân phần cứng"""
     if not _init_gpio():
         return False
     try:
-        pwm_R.ChangeDutyCycle(dc_r)
-        pwm_G.ChangeDutyCycle(dc_g)
-        pwm_B.ChangeDutyCycle(dc_b)
+        # Sử dụng hàm set_PWM_dutycycle của pigpio để phát xung mượt mà
+        pi.set_PWM_dutycycle(RED_PIN, int(dc_r))
+        pi.set_PWM_dutycycle(GREEN_PIN, int(dc_g))
+        pi.set_PWM_dutycycle(BLUE_PIN, int(dc_b))
         return True
     except Exception as e:
-        print(f"-> [LỖI LED PWM]: Không thể thay đổi độ sáng xung: {e}")
+        print(f"-> [LỖI LED PWM PIGPIO]: Không thể thay đổi xung: {e}")
         return False
 
 def _interruptible_sleep(duration):
-    """💡 Hàm ngủ chia nhỏ: Cho phép thoát trạng thái ngủ ngay lập tức nếu phát hiện cờ dừng được bật"""
+    """💡 Hàm ngủ chia nhỏ: Phát hiện cờ dừng lập tức để thoát luồng ngầm"""
     global stop_blink_flag
     step = 0.01
     elapsed = 0
@@ -119,27 +103,23 @@ def _interruptible_sleep(duration):
     return False
 
 # -----------------------------------------------------------------
-# CÁC HÀM XỬ LÝ LOGIC LED ONBOARD CỦA PI
+# CÁC HÀM XỬ LÝ LOGIC LED ONBOARD
 # -----------------------------------------------------------------
 
 def sAct(state, color="white"):
-    """💡 ĐÃ ĐỔI TÊN (ĐỒNG BỘ): Điều khiển bật/tắt đèn LED Onboard tĩnh"""
+    """(ĐỒNG BỘ): Điều khiển bật/tắt đèn LED Onboard tĩnh"""
     global stop_blink_flag
     print(f"-> [TÍNH NĂNG LED SYS] sAct: State={state}")
-    
-    # Kích hoạt cờ dừng nếu có chu kỳ nhấp nháy cũ của led onboard (nếu tích hợp sau này)
     stop_blink_flag = True
     
     if str(state).lower() in ["on", "1", "true"]:
-        if _write_led(1):
-            return "SUCCESS: Onboard LED is now ON"
+        if _write_led(1): return "SUCCESS: Onboard LED is now ON"
     else:
-        if _write_led(0):
-            return "SUCCESS: Onboard LED is now OFF"
+        if _write_led(0): return "SUCCESS: Onboard LED is now OFF"
     return "ERROR: Không thể điều khiển LED hệ thống."
 
 def ActBlink(times=3, speed="fast"):
-    """💡 ĐÃ ĐỔI TÊN (BẤT ĐỒNG BỘ): Nhấp nháy đèn Onboard"""
+    """(BẤT ĐỒNG BỘ): Nhấp nháy đèn Onboard"""
     global stop_blink_flag
     print(f"-> [TÍNH NĂNG LED] ActBlink: Times={times}, Speed={speed}")
     
@@ -163,203 +143,216 @@ def led_sos():
     print("-> [TÍNH NĂNG LED] led_sos: Đang phát tín hiệu cứu hộ SOS...")
     
     stop_blink_flag = False
-    SHORT_GAP = 0.15  
-    LONG_GAP = 0.45   
-    ELEMENT_GAP = 0.15 
-    LETTER_GAP = 0.4  
+    SHORT_GAP, LONG_GAP = 0.15, 0.45
+    ELEMENT_GAP, LETTER_GAP = 0.15, 0.4
 
     try:
-        # 1. Chữ 'S'
         for _ in range(3):
             if stop_blink_flag: return "SUCCESS: SOS loop interrupted."
             _write_led(1); time.sleep(SHORT_GAP)
             _write_led(0); time.sleep(ELEMENT_GAP)
         time.sleep(LETTER_GAP)
-
-        # 2. Chữ 'O'
         for _ in range(3):
             if stop_blink_flag: return "SUCCESS: SOS loop interrupted."
             _write_led(1); time.sleep(LONG_GAP)
             _write_led(0); time.sleep(ELEMENT_GAP)
         time.sleep(LETTER_GAP)
-
-        # 3. Chữ 'S'
         for _ in range(3):
             if stop_blink_flag: return "SUCCESS: SOS loop interrupted."
             _write_led(1); time.sleep(SHORT_GAP)
             _write_led(0); time.sleep(ELEMENT_GAP)
-            
-        return "SUCCESS: Đã hoàn thành 1 chu kỳ phát tín hiệu SOS trên đèn ACT."
+        return "SUCCESS: Đã hoàn thành 1 chu kỳ SOS trên đèn ACT."
     except Exception as e:
         return f"ERROR: Không thể phát tín hiệu SOS: {e}"
     
 # -----------------------------------------------------------------
-# CÁC HÀM XỬ LÝ LOGIC LED ĐẦU TJBOT (HỖ TRỢ PWM & HEX)
+# CÁC HÀM XỬ LÝ LOGIC LED ĐẦU (HỖ TRỢ PWM HOÀN HẢO)
 # -----------------------------------------------------------------
 
 def sHead(state, color="white"):
-    """💡 ĐÃ ĐỔI TÊN (ĐỒNG BỘ): Bật màu tĩnh hoặc TẮT KHẨN CẤP LED đầu."""
+    """(ĐỒNG BỘ): Bật màu tĩnh hoặc TẮT KHẨN CẤP LED đầu."""
     global stop_blink_flag
-    color_key = color.lower().strip().strip("'\"").strip("'\'")
-    state_str = str(state).lower().strip().strip("'\"").strip("'\'")
+    color_key = color.lower().strip().strip("'\"")
+    state_str = str(state).lower().strip().strip("'\"")
     
-    print(f"-> [SYS LED HEAD PWM] sHead: State={state_str}, Color={color_key}")
+    print(f"-> [SYS LED HEAD PIGPIO] sHead: State={state_str}, Color={color_key}")
     
-    # Nếu nhận lệnh dừng (off/black/0/false): Hạ cờ ngắt lập tức!
     if state_str in ["off", "0", "false", "black"]:
-        stop_blink_flag = True  # Luồng HeadBlink ngầm đọc được cờ này sẽ tự 'break' và thoát ngay lập tức
+        stop_blink_flag = True  
         _write_head_rgb_pwm(0, 0, 0)
         return "SUCCESS: Head LED is now OFF and Blink loop was terminated"
             
-    # Nếu nhận lệnh bật tĩnh: Ép luồng chớp tắt cũ phải dừng lại trước khi đổi màu tĩnh
     elif state_str in ["on", "1", "true"]:
         stop_blink_flag = True  
-        time.sleep(0.02) # Nhường một chu kỳ cực ngắn để luồng ngầm cũ kịp thoát
+        time.sleep(0.02) 
         stop_blink_flag = False 
         
         target_hex = COLOR_MAP.get(color_key, color_key)
         pwm_values = _hex_to_pwm_duty(target_hex)
         
         if pwm_values is not None:
-            dc_r, dc_g, dc_b = pwm_values
-            if _write_head_rgb_pwm(dc_r, dc_g, dc_b):
-                return f"SUCCESS: Head LED Mixed via PWM with HEX [{target_hex}]"
+            r, g, b = pwm_values
+            if _write_head_rgb_pwm(r, g, b):
+                return f"SUCCESS: Head LED Mixed via Hardware PWM with HEX [{target_hex}]"
                 
-        _write_head_rgb_pwm(100, 100, 100)
-        return f"WARNING: Màu '{color}' lỗi định dạng HEX. Mặc định bật màu WHITE."
+        _write_head_rgb_pwm(255, 255, 255)
+        return f"WARNING: Màu '{color}' lỗi HEX. Mặc định bật WHITE."
             
     return "ERROR: Không thể xác định trạng thái điều khiển LED đầu."
 
 def HeadBlink(times=3, speed="fast", color="white"):
-    """💡 ĐÃ ĐỔI TÊN (BẤT ĐỒNG BỘ): Nhấp nháy đèn ở đầu. Hàm này sẽ được luồng mẹ ném ngầm vào Thread."""
+    """(BẤT ĐỒNG BỘ): Nhấp nháy đèn ở đầu."""
     global stop_blink_flag
     color_key = color.lower().strip()
     print(f"-> [TÍNH NĂNG LED HEAD] HeadBlink: Times={times}, Speed={speed}, Color={color_key}")
     
-    # Chuẩn bị chạy chu kỳ mới, hạ cờ stop về trạng thái mở bình thường
     stop_blink_flag = False
-    
     delay = 0.08 if speed.lower() == "fast" else 0.4
     target_hex = COLOR_MAP.get(color_key, color_key)
     pwm_values = _hex_to_pwm_duty(target_hex)
-    dc_r, dc_g, dc_b = pwm_values if pwm_values is not None else (100, 100, 100)
+    r, g, b = pwm_values if pwm_values is not None else (255, 255, 255)
 
     try:
         times = int(times)
         for _ in range(times):
-            if stop_blink_flag:  # Kiểm tra liên tục: nếu nút OFF được nhấn, biến này lập tức thành True và dừng vòng lặp
-                break
-                
-            _write_head_rgb_pwm(dc_r, dc_g, dc_b)
+            if stop_blink_flag: break
+            _write_head_rgb_pwm(r, g, b)
             if _interruptible_sleep(delay): break
-            
             _write_head_rgb_pwm(0, 0, 0)
             if _interruptible_sleep(delay): break
             
-        _write_head_rgb_pwm(0, 0, 0) # Luôn trả phần cứng về trạng thái tắt an toàn khi thoát
-        return f"SUCCESS: Head LED blink process finished or safely interrupted."
+        _write_head_rgb_pwm(0, 0, 0) 
+        return f"SUCCESS: Head LED blink process finished safely."
     except ValueError:
-        return "ERROR: Tham số 'times' phải là một số nguyên!"
+        return "ERROR: Tham số 'times' phải là số nguyên!"
 
 # -----------------------------------------------------------------
-# HÀM TỰ KIỂM TRA TOÀN DIỆN
+# 💡 KHỐI HIỆU ỨNG RAINBOW VÔ HẠN & NHỊP THỜ SIÊU MỊN MÀNG (PIGPIO)
+# -----------------------------------------------------------------
+
+def Rainbow(effect_type="7color"):
+    """(BẤT ĐỒNG BỘ): Tạo hiệu ứng Rainbow vô hạn và mượt mà hoàn toàn nhờ băm xung phần cứng DMA."""
+    global stop_blink_flag
+    eff = str(effect_type).lower().strip().strip("'\"")
+    print(f"-> [TÍNH NĂNG RAINBOW PIGPIO] Rainbow: Khởi chạy kiểu hiệu ứng VÔ HẠN = {eff}")
+    
+    stop_blink_flag = False
+    step_delay = 0.02 
+
+    try:
+        # Vòng lặp VÔ HẠN, chỉ thoát khi nhận lệnh sHead("off")
+        while not stop_blink_flag:
+
+            # KIỂU 1: ĐỎ - XANH LÁ (Tone R-G)
+            if eff == "rg":
+                for r in range(255, -1, -5):
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(r, 255 - r, 0)
+                    if _interruptible_sleep(step_delay): break
+                for g in range(255, -1, -5):
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(255 - g, g, 0)
+                    if _interruptible_sleep(step_delay): break
+
+            # KIỂU 2: ĐỎ - TRẮNG (Tone R-W)
+            elif eff == "rw":
+                for i in range(0, 256, 5):
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(255, i, i)
+                    if _interruptible_sleep(step_delay): break
+                for i in range(255, -1, -5):
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(255, i, i)
+                    if _interruptible_sleep(step_delay): break
+
+            # KIỂU 3: XANH LÁ - TRẮNG (Tone G-W)
+            elif eff == "gw":
+                for i in range(0, 256, 5):
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(i, 255, i)
+                    if _interruptible_sleep(step_delay): break
+                for i in range(255, -1, -5):
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(i, 255, i)
+                    if _interruptible_sleep(step_delay): break
+
+            # 🌈 KIỂU 4: 7 SẮC CẦU VỒNG (CHẬM, MƯỢT TUYỆT ĐỐI & VÔ HẠN)
+            elif eff == "7color":
+                slow_delay = 0.06  # Tốc độ làm chậm lý tưởng để hòa sắc lung linh
+                # 1. Đỏ -> Vàng (Tăng G)
+                for g in range(0, 256, 3): # Bước nhảy nhỏ 3 giúp dải sắc chuyển đổi vô cùng nhuyễn
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(255, g, 0)
+                    if _interruptible_sleep(slow_delay): break
+                # 2. Vàng -> Xanh lá (Giảm R)
+                for r in range(255, -1, -3):
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(r, 255, 0)
+                    if _interruptible_sleep(slow_delay): break
+                # 3. Xanh lá -> Cyan (Tăng B)
+                for b in range(0, 256, 3):
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(0, 255, b)
+                    if _interruptible_sleep(slow_delay): break
+                # 4. Cyan -> Xanh dương (Giảm G)
+                for g in range(255, -1, -3):
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(0, g, 255)
+                    if _interruptible_sleep(slow_delay): break
+                # 5. Xanh dương -> Magenta (Tăng R)
+                for r in range(0, 256, 3):
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(r, 0, 255)
+                    if _interruptible_sleep(slow_delay): break
+                # 6. Magenta -> Đỏ (Giảm B)
+                for b in range(255, -1, -3):
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(255, 0, b)
+                    if _interruptible_sleep(slow_delay): break
+
+            # 🌬️ KIỂU 5: NHỊP THỜ - BREATHING (ĐÃ KHẮC PHỤC LỖI NHÁY - MỜ TỎ SIÊU MỊN)
+            elif eff == "breath":
+                # Chạy từ bước nhảy 1 đơn vị, kết hợp Hardware PWM sẽ loại bỏ hoàn toàn lỗi ON/OFF
+                for i in range(0, 256, 2):
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(i, i, i)
+                    if _interruptible_sleep(0.012): break
+                for i in range(255, -1, -2):
+                    if stop_blink_flag: break
+                    _write_head_rgb_pwm(i, i, i)
+                    if _interruptible_sleep(0.012): break
+            
+            else:
+                _write_head_rgb_pwm(0, 0, 0)
+                return f"ERROR: Không tồn tại kiểu màu [{effect_type}]"
+
+        _write_head_rgb_pwm(0, 0, 0) 
+        return f"SUCCESS: Hiệu ứng vô hạn [{effect_type}] đã được giải phóng an toàn."
+    except Exception as e:
+        _write_head_rgb_pwm(0, 0, 0)
+        return f"ERROR tại luồng màu pigpio: {e}"
+
+# -----------------------------------------------------------------
+# HÀM TỰ KIỂM TRA TOÀN DIỆN VÀ ĐĂNG KÝ API
 # -----------------------------------------------------------------
 
 def selftest():
-    """Hàm tự kiểm tra trạng thái hoạt động của cả LED Onboard và LED PWM ở đầu"""
-    print("\n--- [SELFTEST] BẮT ĐẦU KIỂM TRA TOÀN BỘ MÔ-ĐUN LED (CÓ PWM) ---")
-    
-    print("[1/2] Đang kiểm tra LED Onboard hệ thống...")
-    if not os.path.exists(LED_PATH):
-        print(f"❌ THẤT BẠI: Không tìm thấy đường dẫn LED hệ thống tại {LED_PATH}!")
-        onboard_ok = False
-    else:
-        print("💡 Chớp sáng LED onboard hệ thống 3 lần...")
-        success_on = _write_led(1)
-        time.sleep(0.2)
-        success_off = _write_led(0)
-        time.sleep(0.6)
-        _write_led(1); time.sleep(0.2); _write_led(0); time.sleep(0.6)
-        _write_led(1); time.sleep(0.2); _write_led(0)       
-        
-        if success_on and success_off:
-            print("✅ OK: Cụm LED Onboard phản hồi tốt.")
-            onboard_ok = True
-        else:
-            print("❌ THẤT BẠI: Lỗi phân quyền ghi File hệ thống!")
-            onboard_ok = False
-
-    print("-----------------------------------------------------------------")
-
-    print("[2/2] Đang kiểm tra hệ thống điều xung PWM của LED RGB Đầu...")
-    if not _init_gpio():
-        print("❌ THẤT BẠI: Lỗi khởi tạo cấu hình thư viện GPIO!")
-        rgb_ok = False
-    else:
-        print("💡 Khởi chạy hiệu ứng tăng mờ dần (Fade In) màu ĐỎ...")
-        try:
-            for brightness in range(0, 101, 4):
-                _write_head_rgb_pwm(brightness, 0, 0)
-                time.sleep(0.02)
-            time.sleep(0.3)
-            for brightness in range(0, 101, 4):
-                _write_head_rgb_pwm(0, brightness, 0)
-                time.sleep(0.02)
-            time.sleep(0.3) 
-            for brightness in range(0, 101, 4):
-                _write_head_rgb_pwm(0, 0, brightness)
-                time.sleep(0.02)
-            time.sleep(0.3)                          
-            _write_head_rgb_pwm(0, 0, 0)
-            print("✅ OK: Bộ điều xung PWM của LED Đầu hoạt động cực kỳ mượt mà.")
-            rgb_ok = True
-        except Exception as e:
-            print(f"❌ THẤT BẠI: Xảy ra xung đột trong quá trình phát xung: {e}")
-            rgb_ok = False
-            
-    print("\n--- [KẾT QUẢ TỔNG HỢP SELFTEST MÔ-ĐUN ĐÈN ĐIỀU KHIỂN] ---")
-    if onboard_ok and rgb_ok:
-        print("=> TOÀN BỘ MÔ-ĐUN LED TRÊN ROBOT HOẠT ĐỘNG HOÀN HẢO! ✅")
-        return True
-    else:
-        print("=> HỆ THỐNG PHÁT HIỆN CÓ LỖI Ở MỘT TRONG HAI CỤM ĐÈN ĐIỀU KHIỂN! ❌")
+    print("\n--- [SELFTEST] KIỂM TRA MÔ-ĐUN LED VỚI PIGPIO ---")
+    if not pi.connected:
+        print("❌ THẤT BẠI: pigpio daemon chưa chạy!")
         return False
-
-# -----------------------------------------------------------------
-# HÀM ĐĂNG KÝ VÀ CUNG CẤP TÀI LIỆU HƯỚNG DẪN (API DOCS)
-# -----------------------------------------------------------------
+    _write_head_rgb_pwm(255, 0, 0); time.sleep(0.3)
+    _write_head_rgb_pwm(0, 255, 0); time.sleep(0.3)
+    _write_head_rgb_pwm(0, 0, 255); time.sleep(0.3)
+    _write_head_rgb_pwm(0, 0, 0)
+    print("✅ OK: Phần cứng băm xung phần cứng hoạt động hoàn hảo.")
+    return True
 
 def register(actions_map):
-    # Đăng ký các hàm Onboard (sAct chạy Sync, ActBlink chạy Async)
-    actions_map["sAct"] = {
-        "func": sAct,
-        "params": "state, color='white'",
-        "example": "sAct(on)"
-    }
-       
-    actions_map["ActBlink"] = {
-        "func": ActBlink,
-        "params": "times=3, speed='fast'",
-        "example": "ActBlink(5, slow)"
-    }
-    
-    # Đăng ký các hàm LED Đầu (sHead chạy Sync ưu tiên, HeadBlink chạy Async ngầm)
-    actions_map["Head"] = {
-        "func": sHead,
-        "params": "state=0 | 1 | on | off, color=#FFFFFF | white | red | green | blue | yellow | cyan | magenta | purple | black",
-        "example": "sHead(on, #ff00ff)"
-    }
-        
-    actions_map["HeadBlink"] = {
-        "func": HeadBlink,
-        "params": "times=3, speed=fast | low, color=#FFFFFF | white | red | green | blue | yellow | cyan | magenta | purple | black",
-        "example": "HeadBlink(5, slow, blue)"
-    }
-    
-    # Lệnh SOS mặc định chạy Async ngầm
-    actions_map["led_sos"] = {
-        "func": led_sos,
-        "params": "",
-        "example": "led_sos()"
-    }
-    print("-> [HỆ THỐNG] Đã đồng bộ tài liệu theo quy tắc phân luồng: sAct, ActBlink, sHead, HeadBlink")
+    actions_map["sAct"] = {"func": sAct, "params": "state, color='white'", "example": "sAct(on)"}
+    actions_map["ActBlink"] = {"func": ActBlink, "params": "times=3, speed='fast'", "example": "ActBlink(5, slow)"}
+    actions_map["Head"] = {"func": sHead, "params": "state, color", "example": "sHead(on, #ff00ff)"}
+    actions_map["HeadBlink"] = {"func": HeadBlink, "params": "times, speed, color", "example": "HeadBlink(5, slow, blue)"}
+    actions_map["led_sos"] = {"func": led_sos, "params": "", "example": "led_sos()"}
+    actions_map["Rainbow"] = {"func": Rainbow, "params": "effect_type", "example": "Rainbow(7Color)"}
+    print("-> [HỆ THỐNG] Đã đồng bộ pigpio API: sAct, ActBlink, sHead, HeadBlink, Rainbow")

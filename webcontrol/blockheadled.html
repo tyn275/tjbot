@@ -1,3 +1,50 @@
+<style>
+    /* Hiệu ứng chữ Rainbow Gradient */
+    .text-rainbow-active {
+        background: linear-gradient(to right, #ef5350, #f48fb1, #7e57c2, #2196f3, #26c6da, #43a047, #eeff41, #f9a825, #ff5722);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+        display: inline-block;
+    }
+
+    /* Animation cho bóng đèn mô phỏng Rainbow */
+    @keyframes rainbowGlow {
+        0% {
+            color: #ff0000;
+            filter: drop-shadow(0 0 15px #ff0000);
+        }
+
+        20% {
+            color: #ffff00;
+            filter: drop-shadow(0 0 15px #ffff00);
+        }
+
+        40% {
+            color: #00ff00;
+            filter: drop-shadow(0 0 15px #00ff00);
+        }
+
+        60% {
+            color: #00ffff;
+            filter: drop-shadow(0 0 15px #00ffff);
+        }
+
+        80% {
+            color: #0000ff;
+            filter: drop-shadow(0 0 15px #0000ff);
+        }
+
+        100% {
+            color: #ff00ff;
+            filter: drop-shadow(0 0 15px #ff00ff);
+        }
+    }
+
+    .animate-rainbow {
+        animation: rainbowGlow 3s linear infinite;
+    }
+</style>
 <div class="card p-4 shadow-sm border-0 bg-white h-100">
     <div class="d-flex align-items-center mb-3">
         <div class="p-2 rounded me-3" style="background-color: #f0f3ff; color: #5f27cd;">
@@ -8,35 +55,43 @@
             <small class="text-muted">Hai bộ điều khiển LED chạy độc lập hoàn toàn</small>
         </div>
     </div>
-    
+
     <div class="row align-items-center">
         <div class="col-auto text-center border-end pe-4 me-2">
-            <div class="p-3 bg-white rounded d-flex flex-column align-items-center justify-content-center border" style="min-width: 120px; min-height: 130px;">
-                <i id="ledSimHex" class="fa-solid fa-lightbulb fa-4x" 
-                   style="color: #A020F0; transition: all 0.3s ease; filter: drop-shadow(0 0 12px #A020F0);"></i>
+            <div class="p-3 bg-white rounded d-flex flex-column align-items-center justify-content-center border"
+                style="min-width: 120px; min-height: 130px;">
+                <i id="ledSimHex" class="fa-solid fa-lightbulb fa-4x"
+                    style="color: #A020F0; transition: all 0.3s ease; filter: drop-shadow(0 0 12px #A020F0);"></i>
                 <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 0.5px;">LED 1 (HEX)</div>
             </div>
         </div>
 
         <div class="col">
             <div class="mb-1">
-                <label class="form-label fw-semibold text-secondary small mb-1">1. ĐIỀU KHIỂN QUA MÃ HEX / PALETTE</label>
+                <label class="form-label fw-semibold text-secondary small mb-1">1. ĐIỀU KHIỂN QUA MÃ HEX /
+                    PALETTE</label>
             </div>
 
             <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
                 <div class="input-group input-group-sm" style="max-width: 130px; flex-grow: 2;">
                     <span class="input-group-text bg-dark text-white fw-bold">#</span>
-                    <input type="text" id="txtHexInput" class="form-control text-uppercase" value="A020F0" placeholder="A020F0" maxlength="6" oninput="handleTextInput(this.value)">
-                    <button class="btn btn-outline-secondary" type="button" onclick="openHexPalette()" title="Mở bảng màu">
+                    <input type="text" id="txtHexInput" class="form-control text-uppercase" value="A020F0"
+                        placeholder="A020F0" maxlength="6" oninput="handleTextInput(this.value)">
+                    <button class="btn btn-outline-secondary" type="button" onclick="openHexPalette()"
+                        title="Mở bảng màu">
                         <i class="fa-solid fa-palette text-primary"></i>
                     </button>
-                    <input type="color" id="pickerHex" value="#a020f0" style="position: absolute; width: 1px; height: 1px; opacity: 0; padding: 0; border: 0;" oninput="handlePaletteInput(this.value)">
+                    <input type="color" id="pickerHex" value="#a020f0"
+                        style="position: absolute; width: 1px; height: 1px; opacity: 0; padding: 0; border: 0;"
+                        oninput="handlePaletteInput(this.value)">
                 </div>
-                
-                <button class="btn btn-success btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadHex('on')">
+
+                <button class="btn btn-success btn-sm fw-bold px-3 flex-grow-1 text-nowrap"
+                    onclick="triggerHeadHex('on')">
                     <i class="fa-solid fa-power-off me-1"></i> Bật
                 </button>
-                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadHex('off')">
+                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1 text-nowrap"
+                    onclick="triggerHeadHex('off')">
                     <i class="fa-solid fa-lightbulb-slash me-1"></i> Tắt
                 </button>
             </div>
@@ -44,7 +99,8 @@
             <div class="d-flex gap-2 align-items-center p-2 bg-light rounded border flex-wrap">
                 <div class="d-flex align-items-center gap-1">
                     <span class="small text-muted fw-bold text-nowrap" style="font-size: 0.8rem;">Chớp:</span>
-                    <input type="number" id="blinkTimesHex" class="form-control form-control-sm text-center" value="5" min="1" max="20" style="width: 45px;">
+                    <input type="number" id="blinkTimesHex" class="form-control form-control-sm text-center" value="5"
+                        min="1" max="20" style="width: 45px;">
                 </div>
                 <div class="d-flex align-items-center gap-1 flex-grow-1">
                     <span class="small text-muted fw-bold text-nowrap" style="font-size: 0.8rem;">Tốc độ:</span>
@@ -53,14 +109,17 @@
                         <option value="slow">Slow</option>
                     </select>
                 </div>
-                <button class="btn btn-warning btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadBlinkHex()">
+                <button class="btn btn-warning btn-sm fw-bold px-3 flex-grow-1 text-nowrap"
+                    onclick="triggerHeadBlinkHex()">
                     <i class="fa-solid fa-bolt me-1"></i> Chớp
                 </button>
-                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadHex('off')">
+                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1 text-nowrap"
+                    onclick="triggerHeadHex('off')">
                     Tắt
                 </button>
             </div>
-            <div class="text-muted mt-1" style="font-size: 0.72rem;">Hệ thống nhận diện: <span id="lblColorNameHex" class="text-purple fw-bold">purple</span></div>
+            <div class="text-muted mt-1" style="font-size: 0.72rem;">Hệ thống nhận diện: <span id="lblColorNameHex"
+                    class="text-purple fw-bold">purple</span></div>
         </div>
     </div>
 
@@ -68,38 +127,48 @@
 
     <div class="row align-items-center">
         <div class="col-auto text-center border-end pe-4 me-2">
-            <div class="p-3 bg-white rounded d-flex flex-column align-items-center justify-content-center border" style="min-width: 120px; min-height: 130px;">
-                <i id="ledSimRgb" class="fa-solid fa-lightbulb fa-4x" 
-                   style="color: #00FF00; transition: all 0.3s ease; filter: drop-shadow(0 0 12px #00FF00);"></i>
+            <div class="p-3 bg-white rounded d-flex flex-column align-items-center justify-content-center border"
+                style="min-width: 120px; min-height: 130px;">
+                <i id="ledSimRgb" class="fa-solid fa-lightbulb fa-4x"
+                    style="color: #00FF00; transition: all 0.3s ease; filter: drop-shadow(0 0 12px #00FF00);"></i>
                 <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 0.5px;">LED 2 (RGB)</div>
             </div>
         </div>
-        
+
         <div class="col">
             <div class="mb-1">
-                <label class="form-label fw-semibold text-secondary small mb-1">2. ĐIỀU KHIỂN QUA HỆ THẬP PHÂN RGB (0 - 255)</label>
+                <label class="form-label fw-semibold text-secondary small mb-1">2. ĐIỀU KHIỂN QUA HỆ THẬP PHÂN RGB (0 -
+                    255)</label>
             </div>
 
             <div class="d-flex gap-2 align-items-center mb-3 flex-wrap">
                 <div class="d-flex gap-1">
                     <div class="input-group input-group-sm" style="min-width:80px">
-                        <span class="input-group-text bg-danger text-white fw-bold px-1" style="font-size: 0.75rem;">R</span>
-                        <input type="number" id="numR" class="form-control rgb-input p-1 text-center" value="0" min="0" max="255" oninput="handleRgbInput()">
+                        <span class="input-group-text bg-danger text-white fw-bold px-1"
+                            style="font-size: 0.75rem;">R</span>
+                        <input type="number" id="numR" class="form-control rgb-input p-1 text-center" value="0" min="0"
+                            max="255" oninput="handleRgbInput()">
                     </div>
                     <div class="input-group input-group-sm" style="min-width:80px">
-                        <span class="input-group-text bg-success text-white fw-bold px-1" style="font-size: 0.75rem;">G</span>
-                        <input type="number" id="numG" class="form-control rgb-input p-1 text-center" value="255" min="0" max="255" oninput="handleRgbInput()">
+                        <span class="input-group-text bg-success text-white fw-bold px-1"
+                            style="font-size: 0.75rem;">G</span>
+                        <input type="number" id="numG" class="form-control rgb-input p-1 text-center" value="255"
+                            min="0" max="255" oninput="handleRgbInput()">
                     </div>
                     <div class="input-group input-group-sm" style="min-width:80px">
-                        <span class="input-group-text bg-primary text-white fw-bold px-1" style="font-size: 0.75rem;">B</span>
-                        <input type="number" id="numB" class="form-control rgb-input p-1 text-center" value="0" min="0" max="255" oninput="handleRgbInput()">
+                        <span class="input-group-text bg-primary text-white fw-bold px-1"
+                            style="font-size: 0.75rem;">B</span>
+                        <input type="number" id="numB" class="form-control rgb-input p-1 text-center" value="0" min="0"
+                            max="255" oninput="handleRgbInput()">
                     </div>
                 </div>
 
-                <button class="btn btn-success btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadRgb('on')">
+                <button class="btn btn-success btn-sm fw-bold px-3 flex-grow-1 text-nowrap"
+                    onclick="triggerHeadRgb('on')">
                     <i class="fa-solid fa-power-off me-1"></i> Bật
                 </button>
-                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadRgb('off')">
+                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1 text-nowrap"
+                    onclick="triggerHeadRgb('off')">
                     <i class="fa-solid fa-lightbulb-slash me-1"></i> Tắt
                 </button>
             </div>
@@ -107,7 +176,8 @@
             <div class="d-flex gap-2 align-items-center p-2 bg-light rounded border flex-wrap">
                 <div class="d-flex align-items-center gap-1">
                     <span class="small text-muted fw-bold text-nowrap" style="font-size: 0.8rem;">Chớp:</span>
-                    <input type="number" id="blinkTimesRgb" class="form-control form-control-sm text-center" value="5" min="1" max="20" style="width: 55px;">
+                    <input type="number" id="blinkTimesRgb" class="form-control form-control-sm text-center" value="5"
+                        min="1" max="20" style="width: 55px;">
                 </div>
                 <div class="d-flex align-items-center gap-1 flex-grow-1">
                     <span class="small text-muted fw-bold text-nowrap" style="font-size: 0.8rem;">Tốc độ:</span>
@@ -116,14 +186,59 @@
                         <option value="slow">Slow</option>
                     </select>
                 </div>
-                <button class="btn btn-warning btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadBlinkRgb()">
+                <button class="btn btn-warning btn-sm fw-bold px-3 flex-grow-1 text-nowrap"
+                    onclick="triggerHeadBlinkRgb()">
                     <i class="fa-solid fa-bolt me-1"></i> Chớp
                 </button>
-                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1 text-nowrap" onclick="triggerHeadRgb('off')">
+                <button class="btn btn-secondary btn-sm fw-bold px-3 flex-grow-1 text-nowrap"
+                    onclick="triggerHeadRgb('off')">
                     Tắt
                 </button>
             </div>
-            <div class="text-muted mt-1" style="font-size: 0.72rem;">Hệ thống nhận diện: <span id="lblColorNameRgb" class="text-green fw-bold">green</span></div>
+            <div class="text-muted mt-1" style="font-size: 0.72rem;">Hệ thống nhận diện: <span id="lblColorNameRgb"
+                    class="text-green fw-bold">green</span></div>
+        </div>
+    </div>
+
+    <hr class="my-4 text-muted opacity-50" style="border-top: 2px dashed #ccc;">
+    
+    <div class="row align-items-center">
+        <div class="col-auto text-center border-end pe-4 me-2">
+            <div class="p-3 bg-white rounded d-flex flex-column align-items-center justify-content-center border" style="min-width: 120px; min-height: 130px;">
+                <i id="ledSimRainbow" class="fa-solid fa-wand-magic-sparkles fa-4x" 
+                   style="color: #6c757d; transition: all 0.3s ease;"></i>
+                <div class="mt-2 text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 0.5px;">LED 3 (EFFECT)</div>
+            </div>
+        </div>
+        
+        <div class="col">
+            <div class="mb-1">
+                <label class="form-label fw-bold small mb-1 text-rainbow-active">3. HIỆU ỨNG RAINBOW & FADE COLORS</label>
+            </div>
+
+            <div class="d-flex gap-2 align-items-center flex-wrap mb-3">
+                <button class="btn btn-outline-danger btn-sm fw-bold px-2 flex-grow-1" onclick="triggerRainbow('RG')">
+                    <i class="fa-solid fa-vial"></i> Đỏ - Xanh G
+                </button>
+                <button class="btn btn-outline-primary btn-sm fw-bold px-2 flex-grow-1" onclick="triggerRainbow('RW')">
+                    <i class="fa-solid fa-snowflake"></i> Đỏ - Trắng
+                </button>
+                <button class="btn btn-outline-success btn-sm fw-bold px-2 flex-grow-1" onclick="triggerRainbow('GW')">
+                    <i class="fa-solid fa-leaf"></i> Xanh G - Trắng
+                </button>
+                <button class="btn btn-dark btn-sm fw-bold px-2 flex-grow-1" style="background: linear-gradient(45deg, red, blue);" onclick="triggerRainbow('7Color')">
+                    <i class="fa-solid fa-rainbow"></i> 7 Sắc
+                </button>
+                <button class="btn btn-outline-info btn-sm fw-bold px-2 flex-grow-1" onclick="triggerRainbow('Breath')">
+                    <i class="fa-solid fa-wind"></i> Nhịp thở
+                </button>
+            </div>
+
+            <div class="p-2 bg-light rounded border d-flex justify-content-between align-items-center">
+                <button class="btn btn-danger btn-sm fw-bold px-4" onclick="triggerRainbow('off')">
+                    <i class="fa-solid fa-power-off me-1"></i> TẮT HIỆU ỨNG
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -155,9 +270,9 @@
     function updateHexSimulation(hexColor) {
         const ledHex = document.getElementById('ledSimHex');
         // Sửa thuộc tính đổi màu lõi bóng đèn và hiệu ứng tỏa bóng (Glow shadow) ra nền sau
-        ledHex.style.color = hexColor; 
+        ledHex.style.color = hexColor;
         ledHex.style.filter = `drop-shadow(0 0 15px ${hexColor})`;
-        
+
         const colorName = colorMap[hexColor.toUpperCase()] || hexColor.toUpperCase();
         document.getElementById('lblColorNameHex').innerText = colorName;
     }
@@ -172,8 +287,8 @@
     // Xử lý khi tự gõ text mã màu vào ô input
     function handleTextInput(textValue) {
         let hex = textValue.trim().toUpperCase();
-        if(hex.length === 6) {
-            if(!hex.startsWith('#')) hex = '#' + hex;
+        if (hex.length === 6) {
+            if (!hex.startsWith('#')) hex = '#' + hex;
             document.getElementById('pickerHex').value = hex.toLowerCase();
             updateHexSimulation(hex);
         }
@@ -205,7 +320,7 @@
         // Sửa thuộc tính đổi màu lõi bóng đèn và hiệu ứng bóng nền cho khối RGB
         ledRgb.style.color = hexColor;
         ledRgb.style.filter = `drop-shadow(0 0 15px ${hexColor})`;
-        
+
         const colorName = colorMap[hexColor.toUpperCase()] || hexColor.toUpperCase();
         document.getElementById('lblColorNameRgb').innerText = colorName;
     }
@@ -245,6 +360,33 @@
         const speed = document.getElementById('blinkSpeedRgb').value;
         const color = getRgbFinalColor();
         sendMQTTCommand(`HeadBlink(${times}, ${speed}, ${color})`);
+    }
+
+    // ==========================================
+    // ⚙️ LOGIC PHẦN 3: HIỆU ỨNG RAINBOW
+    // ==========================================
+    function triggerRainbow(type) {
+        const ledRainbow = document.getElementById('ledSimRainbow');
+        
+        if (type === 'off') {
+            // Gửi lệnh sHead(off) để dập tắt luồng ngầm trên Robot ngay lập tức
+            sendMQTTCommand('Head("off", "black")');
+            
+            // Cập nhật giao diện mô phỏng
+            ledRainbow.classList.remove('animate-rainbow');
+            ledRainbow.style.color = '#6c757d';
+            ledRainbow.style.filter = 'none';
+        } else {
+            // Gửi lệnh Rainbow theo quy tắc Bất đồng bộ (Async)
+            // Lệnh xuất: Rainbow("RG"), Rainbow("7Color")...
+            sendMQTTCommand(`Rainbow("${type}")`);
+            
+            // Cập nhật giao diện mô phỏng
+            ledRainbow.classList.add('animate-rainbow');
+            // Hiệu ứng nháy nhẹ icon khi bấm nút
+            ledRainbow.style.transform = "scale(1.1)";
+            setTimeout(() => { ledRainbow.style.transform = "scale(1)"; }, 200);
+        }
     }
 
     // Khởi tạo màu sắc bóng đèn chuẩn ban đầu khi vừa tải
