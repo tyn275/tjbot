@@ -9,3 +9,7 @@ gtts
 pygame
 pyaudio
 speechrecognition
+numpy 
+pyaudio 
+scipy
+noisereduce

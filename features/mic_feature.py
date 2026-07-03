@@ -3,6 +3,9 @@ import os
 import time
 import wave
 import threading
+import numpy as np         # 💡 Thêm mới để xử lý ma trận toán học
+import noisereduce as nr   # 💡 Thêm mới để lọc nhiễu phổ (Spectral Gating)
+from scipy import signal   # Hạ tầng số lấy mẫu
 
 # 🔥 ĐÃ ĐỔI: Import hàm gửi tin nhắn tập trung từ module mqtt dùng chung
 from features.mqtt import mqtt_response
@@ -30,94 +33,88 @@ is_listening = False
 # -----------------------------------------------------------------
 def _record_and_playback_worker(timeout_sec):
     global is_recording
-    recorded_file = os.path.join(CACHE_DIR, "playback_copy.wav")
+    recorded_file = os.path.join(CACHE_DIR, "playback.wav")
     
     CHUNK = 1024
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
-    # 🔥 ĐÃ SỬA: Ép đúng tần số 44100Hz tương thích hoàn toàn với phần cứng Microphone USB của bạn
-    RATE = 44100 
-
-    p = None
-    stream = None
-
+    
+    # 💡 THAY ĐỔI 1: Ép thu âm ở 44100Hz để vừa vặn với phần cứng của Mic 50k (Tránh lỗi -9997)
+    HARDWARE_RATE = 44100 
+    TARGET_AI_RATE = 16000 # Tần số đích mà ta muốn chuyển đổi về sau khi lọc
+    
     try:
         p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT,
+                        channels=CHANNELS,
+                        rate=HARDWARE_RATE, # Chạy đúng tần số gốc của mic
+                        input=True,
+                        frames_per_buffer=CHUNK)
         
-        # 🔥 ĐÃ SỬA: Thêm device_index=1 giống như bên hàm Listen để bốc trúng cổng USB
-        stream = p.open(
-            format=FORMAT, 
-            channels=CHANNELS, 
-            rate=RATE, 
-            input=True, 
-            input_device_index=1, 
-            frames_per_buffer=CHUNK
-        )
-        print(f"🎙️ [RECORD USB]: Khởi tạo phần cứng thành công. Đang thu âm trong {timeout_sec}s...")
-        
+        print(f"-> [MIC] Phần cứng mở thành công ở {HARDWARE_RATE}Hz. Đang thu âm...")
         frames = []
-        start_time = time.time()
         
-        # Vòng lặp thu âm thông minh có bảo vệ chống tràn bộ đệm và chống kẹt luồng
-        while is_recording and (time.time() - start_time < timeout_sec):
-            try:
-                # Thêm exception_on_overflow=False để tránh treo luồng khi Mic USB bị trễ dữ liệu
-                data = stream.read(CHUNK, exception_on_overflow=False)
-                if data:
-                    frames.append(data)
-            except Exception as read_err:
-                print(f"⚠️ Cảnh báo đọc dữ liệu Mic: {read_err}")
+        # Tính toán số vòng lặp dựa trên HARDWARE_RATE mới
+        for _ in range(0, int(HARDWARE_RATE / CHUNK * timeout_sec)):
+            if not is_recording:
                 break
+            data = stream.read(CHUNK, exception_on_overflow=False)
+            frames.append(data)
             
-        if stream:
-            stream.stop_stream()
-            stream.close()
-        if p:
-            p.terminate()
-        print("🔒 [RECORD]: Đã giải phóng hoàn toàn thiết bị Microphone USB.")
+        print("-> [MIC] Thu âm hoàn tất. Đang chuyển đổi dữ liệu phù hợp với AI...")
+        
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+        
+        if len(frames) > 0:
+            # Chuyển đổi dữ liệu nhị phân sang mảng số Numpy
+            audio_data = np.frombuffer(b''.join(frames), dtype=np.int16)
+            
+            # 💡 THAY ĐỔI 2: DÙNG SCIPY HẠ TẦN SỐ TỪ 44.1kHz XUỐNG 16kHz TRONG BỘ NHỚ
+            # Tính toán số lượng mẫu mới sau khi hạ tần số
+            num_samples = int(len(audio_data) * TARGET_AI_RATE / HARDWARE_RATE)
+            # Thực hiện thuật toán Resample chất lượng cao của Scipy
+            audio_data_16k = signal.resample(audio_data, num_samples).astype(np.int16)
+            
+            # 🌟 KHUẾCH ĐẠI KỸ THUẬT SỐ (DIGITAL GAIN)
+            max_val = np.max(np.abs(audio_data_16k))
+            if max_val > 0:
+                target_peak = 25000
+                gain_factor = min(target_peak / max_val, 8.0)
+                print(f"   [GAIN]: Đã tự động nhân biên độ lên x{gain_factor:.2f} lần.")
+                audio_data_16k = (audio_data_16k * gain_factor).astype(np.int16)
+            
+            # 🌟 LỌC NHIỄU PHỔ TRÊN TẦN SỐ 16KHZ MỚI
+            print("   [LỌC NHIỄU]: Tiến hành bóc tách dải nhiễu xì nền...")
+            cleaned_audio = nr.reduce_noise(y=audio_data_16k, sr=TARGET_AI_RATE, prop_decrease=0.80)
+            final_bytes = cleaned_audio.tobytes()
+        else:
+            final_bytes = b''
 
-        if not is_recording or len(frames) == 0:
-            print("🛑 [RECORD]: Tiến trình bị hủy bỏ hoặc không có dữ liệu âm thanh.")
-            return
-
-        # Ghi file kết quả âm thanh
+        # GHI LẠI FILE WAVE CHUẨN 16KHZ ĐỂ PHÁT HOẶC NHẬN DẠNG
         wf = wave.open(recorded_file, 'wb')
         wf.setnchannels(CHANNELS)
-        wf.setsampwidth(p.get_sample_size(FORMAT))
-        wf.setframerate(RATE)
-        wf.writeframes(b''.join(frames))
+        wf.setsampwidth(pyaudio.PyAudio().get_sample_size(FORMAT))
+        wf.setframerate(TARGET_AI_RATE) # Lưu ở 16000Hz cực nhẹ và chuẩn AI
+        wf.writeframes(final_bytes)
         wf.close()
-        print("💾 [RECORD]: Đã lưu file âm thanh thu từ USB thành công.")
-
-        # --- PHÁT LẠI GIỌNG NÓI ---
-        try:
-            import pygame
-            if not pygame.mixer.get_init():
-                pygame.mixer.init()
-            if pygame.mixer.music.get_busy():
-                pygame.mixer.music.stop()
+        
+        print(f"-> [MIC] Xuất file wave thành công: {recorded_file}")
+        
+        if is_recording:
+            print("-> [SPEAKER] Robot đang nói nhại lại...")
+            os.system(f"aplay {recorded_file}")
             
-            print("🔊 [PLAYBACK]: Robot đang phát lại nhại giọng...")
-            pygame.mixer.music.load(recorded_file)
-            pygame.mixer.music.play()
-        except Exception as ex:
-            print(f"❌ Lỗi khi gọi module phát lại âm thanh nhại: {ex}")
-
     except Exception as e:
-        print(f"❌ Lỗi phần cứng Micro trong quá trình Record: {e}")
-        # Bắn thông tin lỗi về hệ thống MQTT dùng chung
-        mqtt_response(f"s2t=(Lỗi phần cứng Mic: {str(e)})")
-        try:
-            if stream: stream.close()
-            if p: p.terminate()
-        except: pass
+        print(f"-> [LỖI TIỀN XỬ LÝ MIC]: {e}")
     finally:
         is_recording = False
 
 def mic_record_control(state, timeout="5"):
     global is_recording
     state = state.strip().lower()
-    timeout_sec = int(timeout.strip())
+    timeout_sec = int(str(timeout).strip())
 
     if state == "on":
         if is_recording:
@@ -137,42 +134,102 @@ def mic_record_control(state, timeout="5"):
 # -----------------------------------------------------------------
 def _listen_and_recognize_worker(timeout_sec, lang_code):
     global is_listening
-    r = sr.Recognizer()
     
-    r.energy_threshold = 300  
-    r.dynamic_energy_threshold = True
-
-    print(f"🧠 [LISTEN AI]: Hệ thống AI đang tập trung lắng nghe để dịch giọng nói ({timeout_sec}s)...")
+    # Định nghĩa file âm thanh tạm thời sau khi đã được lọc sạch nhiễu
+    listen_file = os.path.join(CACHE_DIR, "listen_clean.wav")
+    
+    CHUNK = 1024
+    FORMAT = pyaudio.paInt16
+    CHANNELS = 1
+    HARDWARE_RATE = 44100   # Tần số gốc ép mic 50k chạy ổn định
+    TARGET_AI_RATE = 16000  # Tần số đích tối ưu nhất cho Google Speech AI
     
     try:
-        # Sử dụng Card mic USB định danh phần cứng index 1 và tần số 44100Hz ổn định
-        with sr.Microphone(device_index=1, sample_rate=44100) as source:
-            r.adjust_for_ambient_noise(source, duration=0.8)
-            if not is_listening: return
-            audio_data = r.listen(source, timeout=timeout_sec, phrase_time_limit=timeout_sec)
-            
-        if not is_listening:
-            print("🛑 [LISTEN AI]: Tiến trình nhận diện bị ngắt bởi người dùng.")
-            return
-
-        print("🤖 [LISTEN AI]: Đang gửi dữ liệu âm thanh lên Cloud AI để xử lý dịch văn bản...")
-        recognized_text = r.recognize_google(audio_data, language=lang_code)
-        print(f"🎯 [LISTEN AI] Kết quả dịch thành công: \"{recognized_text}\"")
+        p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT,
+                        channels=CHANNELS,
+                        rate=HARDWARE_RATE,
+                        input=True,
+                        frames_per_buffer=CHUNK)
         
-        # 🔥 ĐÃ ĐỔI: Sử dụng hàm dùng chung để bắn thẳng kết quả dạng s2=... lên TOPIC_PUB
-        mqtt_response(f"s2t={recognized_text}")
+        print(f"-> [AI MIC] Phần cứng AI mở thành công ở {HARDWARE_RATE}Hz. Hãy nói... (Giữ im lặng 0.5s đầu)")
+        frames = []
+        
+        # Vòng lặp thu âm dựa theo thời gian lắng nghe cấu hình
+        for _ in range(0, int(HARDWARE_RATE / CHUNK * timeout_sec)):
+            if not is_listening:
+                break
+            data = stream.read(CHUNK, exception_on_overflow=False)
+            frames.append(data)
+            
+        print("-> [AI MIC] Đang xử lý làm sạch âm thanh thô trước khi chuyển cho AI...")
+        
+        # Đóng stream phần cứng nhanh để giải phóng tài nguyên
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+        
+        if len(frames) > 0:
+            # 1. Chuyển mảng bytes sang số để xử lý toán học
+            audio_data = np.frombuffer(b''.join(frames), dtype=np.int16)
+            
+            # 2. DÙNG SCIPY HẠ TẦN SỐ TỪ 44.1kHz XUỐNG 16kHz TRONG RAM
+            num_samples = int(len(audio_data) * TARGET_AI_RATE / HARDWARE_RATE)
+            audio_data_16k = signal.resample(audio_data, num_samples).astype(np.int16)
+            
+            # 3. KHUẾCH ĐẠI KỸ THUẬT SỐ (DIGITAL GAIN)
+            max_val = np.max(np.abs(audio_data_16k))
+            if max_val > 0:
+                target_peak = 25000
+                gain_factor = min(target_peak / max_val, 8.0) # Nhân max 8 lần
+                print(f"   [AI GAIN]: Tự động nhân biên độ âm lượng giọng nói lên x{gain_factor:.2f} lần.")
+                audio_data_16k = (audio_data_16k * gain_factor).astype(np.int16)
+            
+            # 4. LỌC SẠCH XÌ NỀN BẰNG NOISEREDUCE TRÊN TẦN SỐ 16KHZ
+            print("   [AI LỌC NHIỄU]: Thuật toán phân tích phổ đang quét sạch tiếng rít của mic...")
+            cleaned_audio = nr.reduce_noise(y=audio_data_16k, sr=TARGET_AI_RATE, prop_decrease=0.85)
+            final_bytes = cleaned_audio.tobytes()
+        else:
+            final_bytes = b''
 
-    except sr.WaitTimeoutError:
-        print("⏳ [LISTEN AI]: Hết thời gian chờ mà không thấy ai nói gì.")
-        mqtt_response("s2t=(Không nghe thấy âm thanh nào từ bạn!)")
+        # 5. GHI DỮ LIỆU SẠCH TINH KHIẾT RA FILE WAV TẠM THỜI
+        wf = wave.open(listen_file, 'wb')
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(pyaudio.PyAudio().get_sample_size(FORMAT))
+        wf.setframerate(TARGET_AI_RATE)
+        wf.writeframes(final_bytes)
+        wf.close()
+        
+        # -----------------------------------------------------------------
+        # 🚀 CHUYỂN FILE ÂM THANH SẠCH CHO ENGINE NHẬN DẠNG AI
+        # -----------------------------------------------------------------
+        if is_listening and len(final_bytes) > 0:
+            recognizer = sr.Recognizer()
+            
+            with sr.AudioFile(listen_file) as source:
+                print("-> [AI ENGINE] Thư viện nhận dạng đang đọc file âm thanh đã được xử lý...")
+                audio_content = recognizer.record(source)
+                
+            print(f"-> [AI GOOGLE] Đang gửi dữ liệu sạch lên Cloud để nhận dạng [Ngôn ngữ: {lang_code}]...")
+            
+            text_result = recognizer.recognize_google(audio_content, language=lang_code)
+            print(f"-> [AI KẾT QUẢ]: \"{text_result}\"")
+            
+            # Gọi thẳng hàm bắn chuỗi text thô lên là xong, 1 tham số duy nhất!
+            mqtt_response("s2t="+text_result)
+            
     except sr.UnknownValueError:
-        print("❓ [LISTEN AI]: Google AI không thể hiểu được từ ngữ bạn vừa nói.")
-        mqtt_response("s2t=(Lỗi: Không nhận diện rõ từ ngữ bạn nói!)")
+        print("-> [AI CẢNH BÁO]: AI không thể nghe rõ bạn nói gì.")
+        mqtt_response("[Không nghe rõ]") # Gửi thông báo chuỗi thô khi lỗi
+    except sr.RequestError as e:
+        print(f"-> [AI LỖI KẾT NỐI]: Không thể kết nối tới máy chủ Google Speech AI: {e}")
+        mqtt_response("[Lỗi kết nối AI]")
     except Exception as e:
-        print(f"❌ Lỗi kết nối dịch vụ Google Speech hoặc lỗi phần cứng: {e}")
-        mqtt_response(f"s2t=(Lỗi kết nối AI: {str(e)})")
+        print(f"-> [LỖI HỆ THỐNG TRONG LUỒNG AI NGẦM]: {e}")
+        mqtt_response(f"[Lỗi hệ thống: {str(e)}]")
     finally:
         is_listening = False
+        print("-> [AI MIC] Trạng thái AI Listen đã được giải phóng.")
 
 def mic_listen_control(state, timeout="5", lang="vi-VN"):
     global is_listening
@@ -213,8 +270,9 @@ def register(actions_map):
     }
        
     actions_map["Listen"] = {
-        "func": mic_listen_control,
-        "params": "state, timeout='5'",
-        "example": 'Listen(on, 10)'
-    }
-    print("=> Mô-đun MIC_FEATURE đã đăng ký thành công danh sách lệnh! 🎙️")
+            "func": mic_listen_control,
+            "params": "state, timeout='5', lang='vi-VN'",
+            "example": "Listen(on, 5, 'vi-VN')"
+        }
+    
+    print("=> Mô-đun MIC_FEATURE đã đăng ký đồng bộ tham số thành công! 🎙️")
