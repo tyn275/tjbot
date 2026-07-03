@@ -22,6 +22,10 @@ pwm_R = None
 pwm_G = None
 pwm_B = None
 
+# 💡 BIẾN CỜ TOÀN CỤC: Luồng ngầm (Async) sẽ liên tục đọc cờ này để tự dừng vòng lặp.
+# Lệnh đồng bộ (Sync) bắt đầu bằng chữ "s" sẽ làm nhiệm vụ thay đổi giá trị cờ này.
+stop_blink_flag = False
+
 # Bảng tên màu cơ bản đã ĐƯỢC CHUẨN HÓA về định dạng HEXCOLOR thống nhất
 COLOR_MAP = {
     "white":   "#ffffff",
@@ -57,16 +61,13 @@ def _init_gpio():
             GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
         
-        # Thiết lập hướng xuất tín hiệu cho các chân
         GPIO.setup([RED_PIN, GREEN_PIN, BLUE_PIN], GPIO.OUT)
         
-        # Khởi tạo bộ băm xung với tần số 2000Hz chống nhấp nháy mắt thường
         if pwm_R is None:
             pwm_R = GPIO.PWM(RED_PIN, 2000)
             pwm_G = GPIO.PWM(GREEN_PIN, 2000)
             pwm_B = GPIO.PWM(BLUE_PIN, 2000)
             
-            # Bắt đầu phát xung ở mức 0% (Tắt đèn)
             pwm_R.start(0)
             pwm_G.start(0)
             pwm_B.start(0)
@@ -76,17 +77,15 @@ def _init_gpio():
         return False
 
 def _hex_to_pwm_duty(hex_str):
-    """Hàm bổ sung: Chuyển đổi một chuỗi hex màu bất kỳ sang bộ ba tỷ lệ phần trăm PWM (dc_r, dc_g, dc_b)"""
+    """Chuyển đổi một chuỗi hex màu bất kỳ sang bộ ba tỷ lệ phần trăm PWM (dc_r, dc_g, dc_b)"""
     hex_color = hex_str.lower().strip().lstrip("#")
     if len(hex_color) != 6 or not all(c in "0123456789abcdef" for c in hex_color):
         return None
     try:
-        # Tách chuỗi hex thành 3 giá trị nguyên từ 0 - 255
         r_255 = int(hex_color[0:2], 16)
         g_255 = int(hex_color[2:4], 16)
         b_255 = int(hex_color[4:6], 16)
         
-        # Quy đổi công thức chuẩn từ dải 255 sang phần trăm xung PWM (0 - 100%)
         dc_r = (r_255 / 255.0) * 100.0
         dc_g = (g_255 / 255.0) * 100.0
         dc_b = (b_255 / 255.0) * 100.0
@@ -107,15 +106,31 @@ def _write_head_rgb_pwm(dc_r, dc_g, dc_b):
         print(f"-> [LỖI LED PWM]: Không thể thay đổi độ sáng xung: {e}")
         return False
 
+def _interruptible_sleep(duration):
+    """💡 Hàm ngủ chia nhỏ: Cho phép thoát trạng thái ngủ ngay lập tức nếu phát hiện cờ dừng được bật"""
+    global stop_blink_flag
+    step = 0.01
+    elapsed = 0
+    while elapsed < duration:
+        if stop_blink_flag:
+            return True
+        time.sleep(step)
+        elapsed += step
+    return False
+
 # -----------------------------------------------------------------
-# CÁC HÀM XỬ LÝ LOGIC LED TRỰC TIẾP CŨ (ONBOARD CỦA PI)
+# CÁC HÀM XỬ LÝ LOGIC LED ONBOARD CỦA PI
 # -----------------------------------------------------------------
 
-def led_control(state, color="white"):
-    """Điều khiển bật/tắt đèn LED Onboard nguyên bản"""
-    print(f"-> [TÍNH NĂNG LED] led_control: State={state}")
+def sAct(state, color="white"):
+    """💡 ĐÃ ĐỔI TÊN (ĐỒNG BỘ): Điều khiển bật/tắt đèn LED Onboard tĩnh"""
+    global stop_blink_flag
+    print(f"-> [TÍNH NĂNG LED SYS] sAct: State={state}")
     
-    if state.lower() in ["on", "1", "true"]:
+    # Kích hoạt cờ dừng nếu có chu kỳ nhấp nháy cũ của led onboard (nếu tích hợp sau này)
+    stop_blink_flag = True
+    
+    if str(state).lower() in ["on", "1", "true"]:
         if _write_led(1):
             return "SUCCESS: Onboard LED is now ON"
     else:
@@ -123,47 +138,54 @@ def led_control(state, color="white"):
             return "SUCCESS: Onboard LED is now OFF"
     return "ERROR: Không thể điều khiển LED hệ thống."
 
-def led_blink_custom(times=3, speed="fast"):
-    """Nhấp nháy đèn Onboard theo số lần và tốc độ chỉ định"""
-    print(f"-> [TÍNH NĂNG LED] led_blink_custom: Times={times}, Speed={speed}")
+def ActBlink(times=3, speed="fast"):
+    """💡 ĐÃ ĐỔI TÊN (BẤT ĐỒNG BỘ): Nhấp nháy đèn Onboard"""
+    global stop_blink_flag
+    print(f"-> [TÍNH NĂNG LED] ActBlink: Times={times}, Speed={speed}")
     
+    stop_blink_flag = False
     delay = 0.05 if speed.lower() == "fast" else 0.3
     try:
         times = int(times)
         for _ in range(times):
+            if stop_blink_flag: break
             _write_led(1)
-            time.sleep(delay)
+            if _interruptible_sleep(delay): break
             _write_led(0)
-            time.sleep(delay)
+            if _interruptible_sleep(delay): break
         return f"SUCCESS: Onboard LED blinked {times} times"
     except ValueError:
         return "ERROR: Tham số 'times' phải là một số nguyên!"
 
 def led_sos():
-    """BỔ SUNG MỚI: Phát tín hiệu SOS qua đèn ACT (Onboard LED) theo mã Morse"""
+    """(BẤT ĐỒNG BỘ): Phát tín hiệu SOS qua đèn ACT"""
+    global stop_blink_flag
     print("-> [TÍNH NĂNG LED] led_sos: Đang phát tín hiệu cứu hộ SOS...")
     
-    # Chuẩn thời gian Morse cơ bản: 
-    SHORT_GAP = 0.15  # Thời gian chớp ngắn (dấu chấm)
-    LONG_GAP = 0.45   # Thời gian chớp dài (dấu gạch)
-    ELEMENT_GAP = 0.15 # Khoảng cách nghỉ giữa các lần chớp trong 1 ký tự
-    LETTER_GAP = 0.4  # Khoảng cách nghỉ giữa các chữ cái (S - O - S)
+    stop_blink_flag = False
+    SHORT_GAP = 0.15  
+    LONG_GAP = 0.45   
+    ELEMENT_GAP = 0.15 
+    LETTER_GAP = 0.4  
 
     try:
-        # 1. Chữ 'S' (3 chớp ngắn)
+        # 1. Chữ 'S'
         for _ in range(3):
+            if stop_blink_flag: return "SUCCESS: SOS loop interrupted."
             _write_led(1); time.sleep(SHORT_GAP)
             _write_led(0); time.sleep(ELEMENT_GAP)
         time.sleep(LETTER_GAP)
 
-        # 2. Chữ 'O' (3 chớp dài)
+        # 2. Chữ 'O'
         for _ in range(3):
+            if stop_blink_flag: return "SUCCESS: SOS loop interrupted."
             _write_led(1); time.sleep(LONG_GAP)
             _write_led(0); time.sleep(ELEMENT_GAP)
         time.sleep(LETTER_GAP)
 
-        # 3. Chữ 'S' (3 chớp ngắn)
+        # 3. Chữ 'S'
         for _ in range(3):
+            if stop_blink_flag: return "SUCCESS: SOS loop interrupted."
             _write_led(1); time.sleep(SHORT_GAP)
             _write_led(0); time.sleep(ELEMENT_GAP)
             
@@ -172,76 +194,81 @@ def led_sos():
         return f"ERROR: Không thể phát tín hiệu SOS: {e}"
     
 # -----------------------------------------------------------------
-# CÁC HÀM XỬ LÝ LOGIC LED BỔ SUNG MỚI (ĐẦU TJBOT - HỖ TRỢ PWM & HEX)
+# CÁC HÀM XỬ LÝ LOGIC LED ĐẦU TJBOT (HỖ TRỢ PWM & HEX)
 # -----------------------------------------------------------------
 
-def head_led_control(state, color="white"):
-    """Điều khiển bật/tắt và pha trộn màu LED bằng PWM theo tên màu hoặc mã #rrggbb trực tiếp"""
+def sHead(state, color="white"):
+    """💡 ĐÃ ĐỔI TÊN (ĐỒNG BỘ): Bật màu tĩnh hoặc TẮT KHẨN CẤP LED đầu."""
+    global stop_blink_flag
     color_key = color.lower().strip().strip("'\"").strip("'\'")
-    print(f"-> [TÍNH NĂNG LED HEAD PWM] head_led_control: State={state}, Color={color_key}")
-    
     state_str = str(state).lower().strip().strip("'\"").strip("'\'")
     
-    print(f"{state_str}")
-    # 1. XỬ LÝ LỆNH TẮT ĐÈN HEAD
-    if state_str.lower() in ["off", "0", "false"]:
-        print(f"{state_str}")
-        if _write_head_rgb_pwm(0, 0, 0):
-            return "SUCCESS: Head LED is now OFF via PWM"
+    print(f"-> [SYS LED HEAD PWM] sHead: State={state_str}, Color={color_key}")
+    
+    # Nếu nhận lệnh dừng (off/black/0/false): Hạ cờ ngắt lập tức!
+    if state_str in ["off", "0", "false", "black"]:
+        stop_blink_flag = True  # Luồng HeadBlink ngầm đọc được cờ này sẽ tự 'break' và thoát ngay lập tức
+        _write_head_rgb_pwm(0, 0, 0)
+        return "SUCCESS: Head LED is now OFF and Blink loop was terminated"
             
-    # 2. XỬ LÝ LỆNH BẬT ĐÈN HEAD
-    elif state_str.lower() in ["on", "1", "true"]:
-        # Bước 1: Nếu color truyền vào nằm trong bảng tra cứu COLOR_MAP, lấy mã HEX tương ứng ra
-        target_hex = COLOR_MAP.get(color_key, color_key)
+    # Nếu nhận lệnh bật tĩnh: Ép luồng chớp tắt cũ phải dừng lại trước khi đổi màu tĩnh
+    elif state_str in ["on", "1", "true"]:
+        stop_blink_flag = True  
+        time.sleep(0.02) # Nhường một chu kỳ cực ngắn để luồng ngầm cũ kịp thoát
+        stop_blink_flag = False 
         
-        # Bước 2: Biên dịch mã HEX đó ra thông số phần trăm Duty Cycle cho PWM
+        target_hex = COLOR_MAP.get(color_key, color_key)
         pwm_values = _hex_to_pwm_duty(target_hex)
         
         if pwm_values is not None:
             dc_r, dc_g, dc_b = pwm_values
             if _write_head_rgb_pwm(dc_r, dc_g, dc_b):
-                return f"SUCCESS: Head LED Mixed via PWM with HEX [{target_hex}] -> Duty(R:{dc_r:.1f}%, G:{dc_g:.1f}%, B:{dc_b:.1f}%)"
+                return f"SUCCESS: Head LED Mixed via PWM with HEX [{target_hex}]"
                 
-        # Bước 3: Nếu mã màu nhập vào hoàn toàn sai cú pháp hoặc lỗi hệ thống -> Mặc định kích hoạt màu TRẮNG 100%
         _write_head_rgb_pwm(100, 100, 100)
-        return f"WARNING: Màu '{color}' không thể định dạng thành HEXCOLOR. Mặc định bật màu WHITE."
+        return f"WARNING: Màu '{color}' lỗi định dạng HEX. Mặc định bật màu WHITE."
             
     return "ERROR: Không thể xác định trạng thái điều khiển LED đầu."
 
-def head_led_blink(times=3, speed="fast", color="white"):
-    """Nhấp nháy đèn ở đầu bằng cách bật/tắt chu kỳ xung PWM theo màu tùy chọn (Tên hoặc HEX)"""
+def HeadBlink(times=3, speed="fast", color="white"):
+    """💡 ĐÃ ĐỔI TÊN (BẤT ĐỒNG BỘ): Nhấp nháy đèn ở đầu. Hàm này sẽ được luồng mẹ ném ngầm vào Thread."""
+    global stop_blink_flag
     color_key = color.lower().strip()
-    print(f"-> [TÍNH NĂNG LED HEAD] head_led_blink: Times={times}, Speed={speed}, Color={color_key}")
+    print(f"-> [TÍNH NĂNG LED HEAD] HeadBlink: Times={times}, Speed={speed}, Color={color_key}")
+    
+    # Chuẩn bị chạy chu kỳ mới, hạ cờ stop về trạng thái mở bình thường
+    stop_blink_flag = False
     
     delay = 0.08 if speed.lower() == "fast" else 0.4
-    
-    # Tìm kiếm mã HEX tương ứng thông qua bảng tra cứu hoặc tự xử lý nếu nhập mã trực tiếp
     target_hex = COLOR_MAP.get(color_key, color_key)
     pwm_values = _hex_to_pwm_duty(target_hex)
-    
-    # Nếu lấy dữ liệu màu thành công, nạp thông số; Nếu thất bại, mặc định chọn Trắng (100, 100, 100)
     dc_r, dc_g, dc_b = pwm_values if pwm_values is not None else (100, 100, 100)
 
     try:
         times = int(times)
         for _ in range(times):
+            if stop_blink_flag:  # Kiểm tra liên tục: nếu nút OFF được nhấn, biến này lập tức thành True và dừng vòng lặp
+                break
+                
             _write_head_rgb_pwm(dc_r, dc_g, dc_b)
-            time.sleep(delay)
+            if _interruptible_sleep(delay): break
+            
             _write_head_rgb_pwm(0, 0, 0)
-            time.sleep(delay)
-        return f"SUCCESS: Head LED blinked {times} times with color [{target_hex}]"
+            if _interruptible_sleep(delay): break
+            
+        _write_head_rgb_pwm(0, 0, 0) # Luôn trả phần cứng về trạng thái tắt an toàn khi thoát
+        return f"SUCCESS: Head LED blink process finished or safely interrupted."
     except ValueError:
         return "ERROR: Tham số 'times' phải là một số nguyên!"
 
 # -----------------------------------------------------------------
-# HÀM TỰ KIỂM TRA TOÀN DIỆN (GỘP CẢ KIỂM TRA CŨ VÀ MỚI)
+# HÀM TỰ KIỂM TRA TOÀN DIỆN
 # -----------------------------------------------------------------
 
 def selftest():
     """Hàm tự kiểm tra trạng thái hoạt động của cả LED Onboard và LED PWM ở đầu"""
     print("\n--- [SELFTEST] BẮT ĐẦU KIỂM TRA TOÀN BỘ MÔ-ĐUN LED (CÓ PWM) ---")
     
-    # 1. Thực hiện kiểm tra cụm LED Onboard nguyên bản
     print("[1/2] Đang kiểm tra LED Onboard hệ thống...")
     if not os.path.exists(LED_PATH):
         print(f"❌ THẤT BẠI: Không tìm thấy đường dẫn LED hệ thống tại {LED_PATH}!")
@@ -264,15 +291,13 @@ def selftest():
 
     print("-----------------------------------------------------------------")
 
-    # 2. Thực hiện kiểm tra cụm LED RGB PWM ở đầu mới bằng hiệu ứng tăng sáng mịn
     print("[2/2] Đang kiểm tra hệ thống điều xung PWM của LED RGB Đầu...")
     if not _init_gpio():
         print("❌ THẤT BẠI: Lỗi khởi tạo cấu hình thư viện GPIO!")
         rgb_ok = False
     else:
-        print("💡 Khởi chạy hiệu ứng tăng mờ dần (Fade In) màu ĐỎ để kiểm tra phần cứng bộ băm xung...")
+        print("💡 Khởi chạy hiệu ứng tăng mờ dần (Fade In) màu ĐỎ...")
         try:
-            # Tăng chu kỳ nhiệm vụ từ 0% lên đến 100% công suất
             for brightness in range(0, 101, 4):
                 _write_head_rgb_pwm(brightness, 0, 0)
                 time.sleep(0.02)
@@ -285,7 +310,6 @@ def selftest():
                 _write_head_rgb_pwm(0, 0, brightness)
                 time.sleep(0.02)
             time.sleep(0.3)                          
-            # Tắt hẳn đèn sau khi test xong
             _write_head_rgb_pwm(0, 0, 0)
             print("✅ OK: Bộ điều xung PWM của LED Đầu hoạt động cực kỳ mượt mà.")
             rgb_ok = True
@@ -306,29 +330,36 @@ def selftest():
 # -----------------------------------------------------------------
 
 def register(actions_map):
-    # Đăng ký các hàm cũ
-    actions_map["Act"] = {
-        "func": led_control,
+    # Đăng ký các hàm Onboard (sAct chạy Sync, ActBlink chạy Async)
+    actions_map["sAct"] = {
+        "func": sAct,
         "params": "state, color='white'",
-        "example": "led_control(on)"
+        "example": "sAct(on)"
     }
        
     actions_map["ActBlink"] = {
-        "func": led_blink_custom,
+        "func": ActBlink,
         "params": "times=3, speed='fast'",
-        "example": "led_blink(5, slow)"
+        "example": "ActBlink(5, slow)"
     }
     
-    # Đăng ký các hàm bổ sung mới
+    # Đăng ký các hàm LED Đầu (sHead chạy Sync ưu tiên, HeadBlink chạy Async ngầm)
     actions_map["Head"] = {
-        "func": head_led_control,
+        "func": sHead,
         "params": "state=0 | 1 | on | off, color=#FFFFFF | white | red | green | blue | yellow | cyan | magenta | purple | black",
-        "example": "Head(on, #ff00ff)"
+        "example": "sHead(on, #ff00ff)"
     }
         
     actions_map["HeadBlink"] = {
-        "func": head_led_blink,
+        "func": HeadBlink,
         "params": "times=3, speed=fast | low, color=#FFFFFF | white | red | green | blue | yellow | cyan | magenta | purple | black",
         "example": "HeadBlink(5, slow, blue)"
     }
-    print("-> [HỆ THỐNG] Đã đồng bộ tài liệu: Gồm LED ACT & LED RGB trên đầu")
+    
+    # Lệnh SOS mặc định chạy Async ngầm
+    actions_map["led_sos"] = {
+        "func": led_sos,
+        "params": "",
+        "example": "led_sos()"
+    }
+    print("-> [HỆ THỐNG] Đã đồng bộ tài liệu theo quy tắc phân luồng: sAct, ActBlink, sHead, HeadBlink")

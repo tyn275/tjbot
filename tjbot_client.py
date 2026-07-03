@@ -11,6 +11,7 @@ from paho.mqtt.subscribeoptions import SubscribeOptions
 from button_genture import watch_hardware_button
 import ast   # Phân tích cú pháp trong mqtt payload
 import signal  # bắt sự kiện dừng service
+import threading    # Xử lý bất đồng bộ với mọi hàm được gọi, trừ những hàm có tên bắt đầu bằng s
 
 # 🔥 ĐÃ ĐỔI: Import cấu hình và hàm phản hồi từ module mqtt dùng chung
 from features.mqtt import BROKER, PORT, USER, PASSWORD, TOPIC_PUB, BOT_ID, mqtt_response
@@ -120,7 +121,6 @@ def on_message(client, userdata, msg):
         help_lines.append("====================================")
         
         help_msg = "\n".join(help_lines)
-        # 🔥 ĐÃ ĐỔI: Sử dụng hàm dùng chung mqtt_response để trả kết quả về kênh status
         mqtt_response(help_msg)
         client.publish(TOPIC_SUB, "OK")         
         return
@@ -158,19 +158,54 @@ def on_message(client, userdata, msg):
             params = [p.strip().strip('"').strip("'") for p in raw_params.split(",")] if raw_params else []
     # ----------------------------------
 
+    # -----------------------------------------------------------------
+    # 💡 ÁP DỤNG QUY TẮC PHÂN LUỒNG MỚI (ĐỒNG BỘ vs BẤT ĐỒNG BỘ)
+    # -----------------------------------------------------------------
     try:
         target_function = ACTIONS_MAP[func_name]["func"]
-        result = target_function(*params)
         
-        # 🔥 ĐÃ ĐỔI: Kết quả thực thi hàm đổ thẳng về mqtt_response tập trung
-        if (result != None and result != ""):
-            mqtt_response(f"{result}")
+        # TRƯỜNG HỢP 1: Hàm hệ thống/tắt khẩn cấp bắt đầu bằng chữ "s" -> Chạy ĐỒNG BỘ trực tiếp
+        if func_name.startswith("s"):
+            print(f"⚡ [EXEC - SYNC]: Chạy đồng bộ lệnh hệ thống ưu tiên: {func_name}")
+            result = target_function(*params)
+            
+            if result is not None and result != "":
+                mqtt_response(f"{result}")
             client.publish(TOPIC_SUB, "OK")
+            
+        # TRƯỜNG HỢP 2: Các hàm tác vụ thông thường (Blink, Move, Speak...) -> Chạy BẤT ĐỒNG BỘ ngầm
+        else:
+            print(f"🚀 [EXEC - ASYNC]: Đẩy tác vụ {func_name} sang luồng chạy ngầm...")
+            
+            # Khởi tạo một Thread phụ để chạy hàm con, giải phóng ngay lập tức luồng MQTT mẹ
+            t = threading.Thread(
+                target=_async_command_worker, 
+                args=(client, target_function, params)
+            )
+            t.daemon = True # Tự giải phóng luồng phụ khi chương trình chính đóng
+            t.start()
+
     except TypeError as e:
         print(f"-> [LỖI THAM SỐ]: {e}")
         client.publish(TOPIC_SUB, "ERR") 
     except Exception as e:
         print(f"-> [LỖI HỆ THỐNG]: {e}")
+        client.publish(TOPIC_SUB, "ERR")
+
+
+def _async_command_worker(client, target_function, params):
+    """💡 HÀM WORKER PHỤ: Thực thi tác vụ bất đồng bộ ngầm và trả log lên kênh status sau khi hoàn thành"""
+    try:
+        result = target_function(*params)
+        
+        if result is not None and result != "":
+            mqtt_response(f"{result}")
+        client.publish(TOPIC_SUB, "OK")
+    except TypeError as e:
+        print(f"-> [LỖI THAM SỐ TRONG LUỒNG NGẦM]: {e}")
+        client.publish(TOPIC_SUB, "ERR")
+    except Exception as e:
+        print(f"-> [LỖI HỆ THỐNG TRONG LUỒNG NGẦM]: {e}")
         client.publish(TOPIC_SUB, "ERR")
 
 # =====================================================================
@@ -246,6 +281,7 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"⚠️ Không thể bật nút bấm: {e}", flush=True)
 
+        # Bỏ qua nếu không cần chào hỏi phức tạp
         welcome()
         
         # Bóc tách đoạn run() cũ ra đây để lấy biến client_instance
