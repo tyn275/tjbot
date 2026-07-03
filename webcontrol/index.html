@@ -483,11 +483,52 @@
             const botId = document.getElementById('botIdInput').value.trim();
             const topicSub = `${botId}/commands`;
 
-            const message = new Paho.MQTT.Message(payloadString);
+            // -----------------------------------------------------------------
+            // 💡 TỰ ĐỘNG CHUẨN HÓA THAM SỐ (THÊM DẤU "" CHO CHỮ, GIỮ NGUYÊN SỐ)
+            // -----------------------------------------------------------------
+            let optimizedPayload = payloadString.trim();
+
+            // Khớp dạng: TenHam(cac_tham_so)
+            const match = optimizedPayload.match(/^(\w+)\((.*)\)$/);
+            if (match) {
+                const funcName = match[1];
+                const rawParams = match[2].trim();
+
+                if (rawParams) {
+                    // Tách các tham số bằng dấu phẩy
+                    const paramsArray = rawParams.split(',');
+
+                    const processedParams = paramsArray.map(p => {
+                        let token = p.strip ? p.strip() : p.trim();
+
+                        // Nếu tham số đã có sẵn dấu ngoặc đơn hoặc ngoặc kép thì giữ nguyên
+                        if ((token.startsWith('"') && token.endsWith('"')) ||
+                            (token.startsWith("'") && token.endsWith("'"))) {
+                            return token;
+                        }
+
+                        // Nếu là số (nguyên hoặc thập phân) thì giữ nguyên không bọc ngoặc
+                        if (!isNaN(token) && token !== "") {
+                            return token;
+                        }
+
+                        // Nếu là chữ hoặc mã màu (ví dụ: off, fast, #00ff00) -> Tự động bọc dấu ngoặc kép ""
+                        return `"${token}"`;
+                    });
+
+                    // Ráp lại thành chuỗi lệnh hoàn chỉnh mới
+                    optimizedPayload = `${funcName}(${processedParams.join(', ')})`;
+                }
+            }
+            // -----------------------------------------------------------------
+
+            // Gửi chuỗi đã được tối ưu lên MQTT
+            const message = new Paho.MQTT.Message(optimizedPayload);
             message.destinationName = topicSub;
             mqttClient.send(message);
 
-            writeLog(`📤 [COMMAND SENT] -> Kênh [${topicSub}]: <span class="text-warning">${payloadString}</span>`);
+            // In log chuỗi sạch đã gửi
+            writeLog(`📤 [COMMAND SENT] -> Kênh [${topicSub}]: <span class="text-warning">${optimizedPayload}</span>`);
         }
 
         // --- HỆ THỐNG KẾT NỐI MQTT ---
