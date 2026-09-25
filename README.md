@@ -72,12 +72,14 @@
     Tìm tới đoạn cấu hình `rootwait` và chèn vào sau lệnh `modules-load=dwc2,g_serial`.\
     ([Xem file minh họa](./osconfig/pi4_bookworm/cmdline.txt))
     5. Lưu file lại, an toàn rút thẻ nhớ ra và cắm lại vào Raspberry Pi 4.
-    6. Và tiếp theo là chạy service phục vụ ở cổng UART đó.
+    6. Kết nối vào cổng COM/UART qua 3 chân GPIO, đăng nhập với tài khoản pi ở trên. Tiếp theo là chạy service phục vụ ở cổng USB Type C đó.
 
         ```shell
         sudo systemctl enable getty@ttyGS0.service
         sudo systemctl start getty@ttyGS0.service
         ```
+
+    Hoàn tất công việc cấu hình USB Type C thành UART.
 
     7. Để phát âm thanh ra loa theo đường aux 3.5mm, chứ không phải hdmi, thì cần thêm lệnh
 
@@ -114,8 +116,8 @@
         và cài các gói phụ thuộc
 
         ```shell
-            sudo apt-get update
-            sudo apt-get install -y libsdl2-mixer-2.0-0 libportmidi0 libsdl2-image-2.0-0 libsdl2-ttf-2.0-0
+        sudo apt-get update
+        sudo apt-get install -y libsdl2-mixer-2.0-0 libportmidi0 libsdl2-image-2.0-0 libsdl2-ttf-2.0-0
         ```
 
         và dùng lênh sau để kiểm tra âm thanh
@@ -130,14 +132,13 @@
         sudo apt-get install -y portaudio19-dev python3-pyaudio
         ```
 
-    11.Cài đặt môi trường bắt buộc cho cho camera:
+    11. Cài đặt môi trường bắt buộc cho cho camera:
 
         ```shell
         sudo apt-get install -y ffmpeg v4l-utils
         # 2. Kiểm tra xem Pi đã nhận phần cứng Camera chưa (Sẽ thấy danh sách dòng /dev/video0 hiện ra)
         ls /dev/video*
         ```
-
 
 5. Kết nối **Rasberry Pi** với module **usb2serial** theo qui tắc noối dây: 
     ![alt text](images/Pi4-usb2serial.png)
@@ -166,6 +167,7 @@ Led RGB 10mm Cathod chung
     ```shell
     mkdir /home/pi/tjbot_mqtt/
     mkdir /home/pi/tjbot_conn/ 
+    mkdir /home/pi/tjbot_mqtt/features 
     ln -s /home/pi/tjbot_mqtt/features/ /home/pi/tjbot_conn/features
     ```
 
@@ -177,6 +179,7 @@ Led RGB 10mm Cathod chung
     sudo apt install -y libcairo2-dev libgirepository1.0-dev greybird-gtk-theme pkg-config python3-dev
     sudo systemctl enable pigpiod && sudo systemctl start pigpiod
     sudo apt install pigpio flac -y
+    cd \home\pi\tjbot_mqtt
     pip install -r requirements.txt --break-system-packages    
     ```
 
@@ -189,7 +192,11 @@ Chưc năng giám sát wifi: Soạn file [**/home/pi/tjbot_conn/wifi_monitor.py*
 
 Để code này tự chạy ngay khi bật nguồn Pi mà bạn không cần phải mở PuTTY lên gõ lệnh, hãy tạo một file Service cho hệ thống quản lý, bằng cách copy các file sau vào đúng chỗ
 
-1. Service chính: [**/etc/systemd/system/tjbot.service**](./tjbot.service)\
+1. Service chính: [**/etc/systemd/system/tjbot.service**](./tjbot.service)
+
+    ```shell
+    sudo mv /homê/pi/tjbot_mqtt/tjbot_client.service  /etc/systemd/system/tjbot.service
+    ```
 2. Service giám sát wifi: [**/etc/systemd/system/wifi-monitor.service**](./wifi-monitor.service)
 
 ### Bước 4: Kích hoạt service và kiểm tra tiến trình
@@ -210,7 +217,7 @@ sudo systemctl start tjbot.service
 sudo systemctl status tjbot.service
 ```
 
-Làm tương tự vởi servie giám sát wifi.
+Làm tương tự vởi servie giám sát **wifi_monitor**.
 
 Nếu service đã chạy và cần cập nhật [Code](#bước-2-viết-mã-nguồn-python-xử-lý-mqtt-tjbot_clientpy) thì cần chạy lại service như sau
 
@@ -225,7 +232,7 @@ sudo systemctl status tjbot.service
 # Xem chi tiết báo lỗi
 sudo journalctl -u tjbot.service -n 50 --no-pager
 ```
-
+r
 >wifi_provisioning.py để cấu hình wifi qua bluetooth chưa thành công
 
 ## Nâng cấp: Giám sát mạng WiFi và đăng kí mới
