@@ -279,9 +279,10 @@
                 </div>
 
                 <div id="section-actions" class="content-section">
-                    <div class="card p-4 shadow-sm border-0 bg-white">
-                        <h3><i class="fa-solid fa-bolt text-warning me-2"></i>Hành động (Actions)</h3>
-                        <p class="text-muted mt-3">Chạy các kịch bản cử động nâng cao.</p>
+                    <div id="col-actions-container">
+                        <div class="text-center p-5 text-muted bg-white rounded shadow-sm">
+                            <i class="fa-solid fa-spinner fa-spin me-2"></i> Đang tải trung tâm kịch bản hành động...
+                        </div>
                     </div>
                 </div>
 
@@ -345,10 +346,42 @@
             if (sectionId === 'gym') {
                 loadGymBlocks();
             }
-            // 💡 THÊM MỚI: Nếu click vào phân hệ wifi, kích hoạt tiến trình nạp file blockwifi.html
+            // Nếu click vào phân hệ wifi, kích hoạt tiến trình nạp file blockwifi.html
             if (sectionId === 'wifi') {
                 loadWifiBlock();
             }
+            // Nếu click vào chức năng Hành động
+            if (sectionId === 'actions') {
+                loadActions();
+            }
+        }
+
+        function loadActions() {
+            if (document.getElementById('actionsConfigLoaded')) {
+                console.log("[UI] Phân hệ Hành động đã tồn tại, bỏ qua fetch lại.");
+                return;
+            }
+
+            // Tiến hành gọi file thử nghiệm actionaskme.html
+            fetch('actionaskme.html')
+                .then(response => response.text())
+                .then(html => {
+                    const container = document.getElementById('col-actions-container');
+                    container.innerHTML = '<div id="actionsConfigLoaded"></div>' + html;
+                    writeLog("[UI] Đã nhúng cấu trúc kịch bản actionaskme.html thành công.");
+
+                    // Kích hoạt cơ chế Eval cô lập để thực thi mã Script bên trong block con
+                    const scripts = container.querySelectorAll('script');
+                    scripts.forEach(oldScript => {
+                        try {
+                            window.eval(oldScript.text);
+                        } catch (e) { console.error("Lỗi thực thi script kịch bản Actions:", e); }
+                    });
+                })
+                .catch(err => {
+                    document.getElementById('col-actions-container').innerHTML =
+                        `<div class="alert alert-danger">Không thể tải cấu hình kịch bản actionaskme.html</div>`;
+                });
         }
 
         // --- HÀM NẠP PHÒNG TẬP (CẢI TIẾN CÔ LẬP SCRIPT) ---
