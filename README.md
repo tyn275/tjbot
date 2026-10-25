@@ -4,82 +4,101 @@
 
 - [OS và khởi động](#os-và-khởi-động)
 - [Lắp ngoại vi](#lắp-ngoại-vi)
-    - [Cánh tay servo](#cánh-tay-servo)
-    - [Led trên đầu](#led-trên-đầu)
+  - [Cánh tay servo](#cánh-tay-servo)
+  - [Led trên đầu](#led-trên-đầu)
 - [Cấu hình MQTT trên Raspberry Pi để điều khiển Robot](#cấu-hình-mqtt-trên-raspberry-pi-để-điều-khiển-robot)
-    - [Bước 1: Tạo môi trường dự án và các thư viện](#bước-1-tạo-môi-trường-dự-án-và-các-thư-viện)
-    - [Bước 2: Viết mã nguồn Python xử lý MQTT tjbot_client.py](#bước-2-viết-mã-nguồn-python-xử-lý-mqtt-tjbot_clientpy)
-    - [Bước 3: Biến file code thành "Tiến trình chạy ngầm" Systemd Service](#bước-3-biến-file-code-thành-tiến-trình-chạy-ngầm-systemd-service)
-    - [Bước 4: Kích hoạt service và kiểm tra tiến trình](#bước-4-kích-hoạt-service-và-kiểm-tra-tiến-trình)
+  - [Bước 1: Tạo môi trường dự án và các thư viện](#bước-1-tạo-môi-trường-dự-án-và-các-thư-viện)
+  - [Bước 2: Viết mã nguồn Python xử lý MQTT tjbot_client.py](#bước-2-viết-mã-nguồn-python-xử-lý-mqtt-tjbot_clientpy)
+  - [Bước 3: Biến file code thành "Tiến trình chạy ngầm" Systemd Service](#bước-3-biến-file-code-thành-tiến-trình-chạy-ngầm-systemd-service)
+  - [Bước 4: Kích hoạt service và kiểm tra tiến trình](#bước-4-kích-hoạt-service-và-kiểm-tra-tiến-trình)
 - [Nâng cấp: Giám sát mạng WiFi và đăng kí mới](#nâng-cấp-giám-sát-mạng-wifi-và-đăng-kí-mới)
-    - [Giải pháp cấu hình Bluetooth thành Serial UART RFCOMM](#giải-pháp-cấu-hình-bluetooth-thành-serial-uart-rfcomm)
-    - [🔍 wifiscan - tìm mạng wifi](#-wifiscan---tìm-mạng-wifi)
-    - [💾 addwifissid, matkhauday - lưu trữ](#-addwifissid-matkhauday---lưu-trữ)
-    - [📋 listwifi - liệt kê](#-listwifi---liệt-kê)
-    - [🗑️ delwifissid - xóa](#-delwifissid---xóa)
-    - [Chạy dịch vụ](#chạy-dịch-vụ)
-- [Sefttest](#sefttest)
+  - [Giải pháp cấu hình Bluetooth thành Serial UART RFCOMM](#giải-pháp-cấu-hình-bluetooth-thành-serial-uart-rfcomm)
+  - [🔍 wifiscan - tìm mạng wifi](#-wifiscan---tìm-mạng-wifi)
+  - [💾 addwifissid, matkhauday - lưu trữ](#-addwifissid-matkhauday---lưu-trữ)
+  - [📋 listwifi - liệt kê](#-listwifi---liệt-kê)
+  - [🗑️ delwifissid - xóa](#-delwifissid---xóa)
+  - [Chạy dịch vụ](#chạy-dịch-vụ)
+- [Selftest](#selftest)
 
 <!-- /TOC -->
 
 ## OS và khởi động
 
-1. Tải về công cụ cài đặt OS:
+1.  Tải về công cụ cài đặt OS:
     - Link chính thức: <https://www.raspberrypi.com/software/>
     - Kho các phiên bản: <https://downloads.raspberrypi.com/imager/>
-2. Tải về Rasberry Pi OS từ link:
-    - Phiên bản Bulleys mới nhất và vẫn còn khả năng can thiệp sâu vào device: <https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2023-05-03/>.\
-    Đang cài đặt với phiên bản **bookworm 64bit lite**.
-    - Các OS cũ: <https://downloads.raspberrypi.org/raspios_lite_arm64/images/>
-3. Sử dụng **Rasberry Pi imager** để burn image lên thẻ nhớ.
+2.  Tải về Raspberry Pi OS từ link:
+    - Phiên bản đang sử dụng: **Raspberry Pi OS Lite 64-bit (Bookworm)**. Link tải: <https://downloads.raspberrypi.org/raspios_lite_arm64/images/>
+    - Các OS cũ hơn (Bullseye, Buster, ...): <https://downloads.raspberrypi.org/raspios_lite_arm64/images/>
+3.  Sử dụng **Rasberry Pi imager** để burn image lên thẻ nhớ.
     - Tài khoản: pi
     - Mật khẩu: raspberry
     - Bật SSH
-4. **Cấu hình kích hoạt UART khi khởi động**:
+4.  **Cấu hình kích hoạt UART khi khởi động**:
     1. Xem thẻ nhớ với phân vùng **bootfs** trên máy tính cá nhân
     2. Tìm file có tên là **config.txt** và mở nó bằng một trình soạn thảo văn bản (như Notepad)
     3. Kéo xuống dưới cùng và thêm các dòng sau vào. ([Xem file minh họa](./osconfig/pi4_bookworm/config.txt))
-        - Mục đích là để kích hoạt chức năng UART trên các chân GPIO
+       - Mục đích là để kích hoạt chức năng UART trên các chân GPIO
 
-            ```plain
-            enable_uart=1
-            ```
+         ```plain
+         enable_uart=1
+         ```
 
-        - Mục đích: biến cổng Usb Type C để truyền UART luôn, nhưng phải hi sinh chức năng nối bàn phím, chuột thì hãy bổ sung cáu hình nữa:
+       - Mục đích: biến cổng USB Type-C thành cổng UART (Serial Console). Nếu muốn kích hoạt, bổ sung cấu hình sau:
 
-            ```plain
-            dtoverlay=dwc2,dr_mode=peripheral
-            ```
+         ```plain
+         dtoverlay=dwc2,dr_mode=peripheral
+         ```
 
-            và đồng thời xóa cum [cm5] di vì nó nhằm kích hoạt tính năng kết nối chuột và bàn phím nên sẽ gây xung đột.
+         > ⚠️ Đồng thời **xóa** (hoặc comment) khối `[cm5]` bên dưới nếu có, vì đó là cấu hình dành riêng cho Compute Module 5, không áp dụng cho Raspberry Pi 4 và sẽ gây xung đột:
 
-            ```plain
-            [cm5]
-            dtoverlay=dwc2,dr_mode=host
-            ```
+         ```plain
+         # Xóa hoặc comment out đoạn này:
+         [cm5]
+         dtoverlay=dwc2,dr_mode=host
+         ```
 
-        - Mục đích: phát được âm thanh ra loa, không bị lỗi phân quyển
+       - Mục đích: phát được âm thanh ra loa, không bị lỗi phân quyền
 
-            Tìm đến dòng bên dưới và đảm bảo nó được đặt là on
+         Tìm đến dòng bên dưới và đảm bảo nó được đặt là `on`. Trên **Raspberry Pi 4** dùng header `[all]` thay vì `[cm5]`:
 
-            ```plain
-            [cm5]
-            dtparam=audio=on
-            ```
+         ```plain
+         [all]
+         dtparam=audio=on
+         ```
 
     4. Nếu muốn dùng Usb Type C để truyền UART thì còn 2 bước thực hiện sau đây, nếu không muốn thì bỏ qua bước 4,5,6 .\
-    Tìm file có tên là **cmdline.txt** và mở nó bằng một trình soạn thảo văn bản (như Notepad).\
-    Tìm tới đoạn cấu hình `rootwait` và chèn vào sau lệnh `modules-load=dwc2,g_serial`.\
-    ([Xem file minh họa](./osconfig/pi4_bookworm/cmdline.txt))
+       Tìm file có tên là **cmdline.txt** và mở nó bằng một trình soạn thảo văn bản (như Notepad).\
+       Tìm tới đoạn cấu hình `rootwait` và chèn vào sau lệnh `modules-load=dwc2,g_serial`.\
+       ([Xem file minh họa](./osconfig/pi4_bookworm/cmdline.txt))
+
     5. Lưu file lại, an toàn rút thẻ nhớ ra và cắm lại vào Raspberry Pi 4.
-    6. Kết nối vào cổng COM/UART qua 3 chân GPIO, đăng nhập với tài khoản pi ở trên. Tiếp theo là chạy service phục vụ ở cổng USB Type C đó.
+    6. Kích hoạt service Serial Console cho cổng USB Type-C. Cần thực hiện **một trong hai cách** sau:
 
-        ```shell
-        sudo systemctl enable getty@ttyGS0.service
-        sudo systemctl start getty@ttyGS0.service
-        ```
+       **Cách A — Qua 3 chân GPIO (USB-to-TTL adapter):** Kết nối module USB-to-TTL adapter vào 3 chân GPIO (TX/RX/GND), mở PuTTY ở tốc độ 115200, đăng nhập tài khoản `pi`, rồi chạy:
 
-    Hoàn tất công việc cấu hình USB Type C thành UART.
+       ```shell
+       sudo systemctl enable getty@ttyGS0.service
+       sudo systemctl start getty@ttyGS0.service
+       ```
+
+       **Cách B — Qua SSH/WiFi (cách khắc phục tạm thời, không cần adapter):**
+       Nếu chưa có module USB-to-TTL, hãy kết nối Pi vào WiFi trước (cấu hình WiFi trong Raspberry Pi Imager khi burn thẻ nhớ hoặc qua file `wpa_supplicant.conf`). Sau khi Pi boot và kết nối WiFi thành công, SSH vào Pi qua mạng LAN:
+
+       ```shell
+       ssh pi@<địa_chỉ_IP_của_Pi>
+       ```
+
+       Rồi chạy lệnh enable service tương tự:
+
+       ```shell
+       sudo systemctl enable getty@ttyGS0.service
+       sudo systemctl start getty@ttyGS0.service
+       ```
+
+       > 💡 Sau khi đã chạy lệnh enable qua một trong hai cách trên, từ lần khởi động tiếp theo, PuTTY kết nối qua cổng COM (USB Type-C) sẽ hiển thị màn hình đăng nhập bình thường thay vì màn hình đen.
+
+    Hoàn tất công việc cấu hình USB Type-C thành UART.
 
     7. Để phát âm thanh ra loa theo đường aux 3.5mm, chứ không phải hdmi, thì cần thêm lệnh
 
@@ -94,37 +113,37 @@
 
     8. Để chỉnh âm lượng loa thật to, hãy chạy lệnh
 
-        ```shell
-        alsamixer
-        ```
+       ```shell
+       alsamixer
+       ```
 
-        - Một giao diện cột sóng hiện ra, bạn dùng nút Mũi tên lên để kéo cột Headphones hoặc Master lên mức 100 (vạch màu xanh sát đỉnh màu đỏ).
-        - Nhấn nút ESC để thoát.
-        - Lưu cấu hình âm lượng này vĩnh viễn không bị mất khi rút điện, chạy lệnh:
+       - Một giao diện cột sóng hiện ra, bạn dùng nút Mũi tên lên để kéo cột Headphones hoặc Master lên mức 100 (vạch màu xanh sát đỉnh màu đỏ).
+       - Nhấn nút ESC để thoát.
+       - Lưu cấu hình âm lượng này vĩnh viễn không bị mất khi rút điện, chạy lệnh:
 
-            ```shell
-            sudo alsactl store
-            ```
+         ```shell
+         sudo alsactl store
+         ```
 
     9. Để tài khoản pi được quyển sử dụng âm thanh (bị cấm mặc định), cần cấp quyền bằng lệnh
 
-        ```shell
-        USER=pi
-        sudo usermod -aG audio $USER
-        ```
+       ```shell
+       USER=pi
+       sudo usermod -aG audio $USER
+       ```
 
-        và cài các gói phụ thuộc
+       và cài các gói phụ thuộc
 
-        ```shell
-        sudo apt-get update
-        sudo apt-get install -y libsdl2-mixer-2.0-0 libportmidi0 libsdl2-image-2.0-0 libsdl2-ttf-2.0-0
-        ```
+       ```shell
+       sudo apt-get update
+       sudo apt-get install -y libsdl2-mixer-2.0-0 libportmidi0 libsdl2-image-2.0-0 libsdl2-ttf-2.0-0
+       ```
 
-        và dùng lênh sau để kiểm tra âm thanh
+       và dùng lênh sau để kiểm tra âm thanh
 
-        ```shell
-        speaker-test -c2 -t wav
-        ```
+       ```shell
+       speaker-test -c2 -t wav
+       ```
 
     10. Cài đặt môi trường Microphone trên Pi:
 
@@ -140,10 +159,10 @@
         ls /dev/video*
         ```
 
-5. Kết nối **Rasberry Pi** với module **usb2serial** theo qui tắc noối dây: 
+5.  Kết nối **Rasberry Pi** với module **usb2serial** theo qui tắc noối dây:
     ![alt text](images/Pi4-usb2serial.png)
     ![alt text](images/Pi4-usb2serial.real.png)
-6. Khởi động lại **Rasberry Pi** với thẻ và mở cổng COM ở tốc độ **115200**. Đợi khoảng 10 giây thì sẽ thấy kết quả như sau
+6.  Khởi động lại **Rasberry Pi** với thẻ và mở cổng COM ở tốc độ **115200**. Đợi khoảng 10 giây thì sẽ thấy kết quả như sau
     ![alt text](images/Pi4-uart.png)
 
 ## Lắp ngoại vi
@@ -164,24 +183,70 @@ Led RGB 10mm Cathod chung
 
 - Tạo Cấu trúc thư mục:
 
-    ```shell
-    mkdir /home/pi/tjbot_mqtt/
-    mkdir /home/pi/tjbot_conn/ 
-    mkdir /home/pi/tjbot_mqtt/features 
-    ln -s /home/pi/tjbot_mqtt/features/ /home/pi/tjbot_conn/features
-    ```
+  ```shell
+  mkdir /home/pi/tjbot_mqtt/
+  mkdir /home/pi/tjbot_conn/
+  mkdir /home/pi/tjbot_mqtt/features
+  ln -s /home/pi/tjbot_mqtt/features/ /home/pi/tjbot_conn/features
+  ```
 
 - Cài đặt các gói
 
-    ```shell
-    audo apt update
-    sudo apt install python3-pip -y
-    sudo apt install -y libcairo2-dev libgirepository1.0-dev greybird-gtk-theme pkg-config python3-dev
-    sudo systemctl enable pigpiod && sudo systemctl start pigpiod
-    sudo apt install pigpio flac -y
-    cd \home\pi\tjbot_mqtt
-    pip install -r requirements.txt --break-system-packages    
-    ```
+  ```shell
+  sudo apt update
+  sudo apt install python3-pip flac -y
+  sudo apt install -y libcairo2-dev libgirepository1.0-dev pkg-config python3-dev
+  ```
+
+  > ⚠️ **Lưu ý với Bookworm:** Gói `pigpio` đã bị gỡ khỏi kho apt chính thức trên Raspberry Pi OS Bookworm. Cần **build từ source** theo các bước sau:
+
+  ```shell
+  # Tải source pigpio v79
+  wget https://github.com/joan2937/pigpio/archive/refs/tags/v79.tar.gz
+  tar -xzf v79.tar.gz
+  cd pigpio-79
+  make
+  sudo make install
+  cd ..
+  ```
+
+  Sau khi build xong, tạo file systemd service để `pigpiod` tự khởi động:
+
+  ```shell
+  sudo nano /etc/systemd/system/pigpiod.service
+  ```
+
+  Nội dung file:
+
+  ```ini
+  [Unit]
+  Description=Pigpio Daemon
+  After=network.target
+
+  [Service]
+  Type=forking
+  ExecStart=/usr/local/bin/pigpiod
+  ExecStop=/bin/kill -s QUIT $MAINPID
+  Restart=on-failure
+
+  [Install]
+  WantedBy=multi-user.target
+  ```
+
+  Kích hoạt service:
+
+  ```shell
+  sudo systemctl daemon-reload
+  sudo systemctl enable pigpiod
+  sudo systemctl start pigpiod
+  ```
+
+  Tiếp theo cài các thư viện Python:
+
+  ```shell
+  cd /home/pi/tjbot_mqtt
+  pip install -r requirements.txt --break-system-packages
+  ```
 
 ### Bước 2: Viết mã nguồn Python xử lý MQTT (tjbot_client.py)
 
@@ -194,9 +259,10 @@ Chưc năng giám sát wifi: Soạn file [**/home/pi/tjbot_conn/wifi_monitor.py*
 
 1. Service chính: [**/etc/systemd/system/tjbot.service**](./tjbot.service)
 
-    ```shell
-    sudo mv /homê/pi/tjbot_mqtt/tjbot_client.service  /etc/systemd/system/tjbot.service
-    ```
+   ```shell
+   sudo mv /home/pi/tjbot_mqtt/tjbot_client.service /etc/systemd/system/tjbot.service
+   ```
+
 2. Service giám sát wifi: [**/etc/systemd/system/wifi-monitor.service**](./wifi-monitor.service)
 
 ### Bước 4: Kích hoạt service và kiểm tra tiến trình
@@ -217,7 +283,7 @@ sudo systemctl start tjbot.service
 sudo systemctl status tjbot.service
 ```
 
-Làm tương tự vởi servie giám sát **wifi_monitor**.
+Làm tương tự với service giám sát **wifi_monitor**.
 
 Nếu service đã chạy và cần cập nhật [Code](#bước-2-viết-mã-nguồn-python-xử-lý-mqtt-tjbot_clientpy) thì cần chạy lại service như sau
 
@@ -232,14 +298,15 @@ sudo systemctl status tjbot.service
 # Xem chi tiết báo lỗi
 sudo journalctl -u tjbot.service -n 50 --no-pager
 ```
-r
->wifi_provisioning.py để cấu hình wifi qua bluetooth chưa thành công
+
+> wifi_provisioning.py để cấu hình wifi qua bluetooth chưa thành công
 
 ## Nâng cấp: Giám sát mạng WiFi và đăng kí mới
 
 Việc giám sát mạng WiFi được thực hiện qua file chức năng [wifi_monitor.py](./wifi_monitor.py), được biến thành service thường trú bởi đăng kí [wifi-monitor.service](./wifi-monitor.service)
 
 **Việc đăng kí mới ** được thực hiện qua bluetooth:
+
 > biến Raspberry Pi thành một thiết bị Bluetooth Classic (chế độ SPP - Serial Port Profile) để giả lập cổng Serial ảo (Virtual UART) là phương án tối ưu. Người dùng chỉ cần bật điện thoại/máy tính, kết nối Bluetooth, truy cập vào một trang web hỗ trợ WebSerial/WebBluetooth (hoặc ứng dụng Serial Terminal) là có thể gõ lệnh tương tác được ngay.
 
 ### Giải pháp cấu hình Bluetooth thành Serial UART (RFCOMM)
@@ -252,39 +319,41 @@ Cách phần mềm xử lý: Tiến trình Python chỉ cần đọc/ghi vào fi
 
 - Bỏ lệnh cấm của hệ thống đối với chip Bluetooth:
 
-    ```shell
-    sudo rfkill unblock bluetooth
-    ```
+  ```shell
+  sudo rfkill unblock bluetooth
+  ```
 
 - Khởi động lại dịch vụ Bluetooth của hệ điều hành
 
-    ```shell
-    sudo systemctl restart bluetooth
-    ```
+  ```shell
+  sudo systemctl restart bluetooth
+  ```
 
 - Mở giao diện cli điều khiển bluetooth
 
-    ```shell
-    sudo bluetoothctl
-    ```
+  ```shell
+  sudo bluetoothctl
+  ```
 
 - Kích hoạt các tính năng của mạng bluetooth
 
-    ```shell
-    power on
-    discoverable on
-    pairable on
-    agent NoInputNoOutput
-    default-agent
-    ```
+  ```shell
+  power on
+  discoverable on
+  pairable on
+  agent NoInputNoOutput
+  default-agent
+  ```
 
-    _Câu lệnh agent NoInputNoOutput sẽ cấu hình cho Pi hiểu rằng: "Đây là thiết bị không có màn hình/bàn phím để nhập mã PIN, hãy tự động đồng ý ghép đôi với mọi thiết bị an toàn yêu cầu kết nối"._
-_
+  _Câu lệnh agent NoInputNoOutput sẽ cấu hình cho Pi hiểu rằng: "Đây là thiết bị không có màn hình/bàn phím để nhập mã PIN, hãy tự động đồng ý ghép đôi với mọi thiết bị an toàn yêu cầu kết nối"._
+
+  \_
+
 - Thoát khỏi giao diện cấu hình bluetooth
 
-    ```shell
-    exit
-    ```
+  ```shell
+  exit
+  ```
 
 - Cho phép quét thấy và Kích hoạt cấu hình SPP (Serial Port Profile)
 
@@ -307,11 +376,11 @@ _
 
 - Cách Pi xử lý: Để xem các mạng Wi-Fi đã được lưu trong bo mạch, Python sẽ chạy lệnh:
 
-    ```shell
-    nmcli -t -f NAME,UUID connection show --active=no
-    ```
+  ```shell
+  nmcli -t -f NAME,UUID connection show --active=no
+  ```
 
-    _(Để lấy cả mật khẩu đã lưu phục vụ việc hiển thị lên trang web, Pi có thể truy cập vào thư mục cấu hình hệ thống /etc/NetworkManager/system-connections/ để đọc khóa psk)._
+  _(Để lấy cả mật khẩu đã lưu phục vụ việc hiển thị lên trang web, Pi có thể truy cập vào thư mục cấu hình hệ thống /etc/NetworkManager/system-connections/ để đọc khóa psk)._
 
 - Kết quả trả về: Trả về danh sách các mạng kèm mật khẩu dạng text để trang web đồng bộ.
 
@@ -319,9 +388,9 @@ _
 
 - Cách Pi xử lý: Python sẽ ra lệnh cho hệ thống xóa bỏ profile cấu hình của mạng Wi-Fi đó để Pi không bao giờ tự động kết nối lại nữa:
 
-    ```shell
-    nmcli connection delete "TÊN_WIFI"
-    ```
+  ```shell
+  nmcli connection delete "TÊN_WIFI"
+  ```
 
 - Kết quả trả về: Trả về DELETED_SUCCESS để trang web cập nhật lại giao diện (gỡ Wi-Fi đó ra khỏi danh sách đã lưu).
 
@@ -338,7 +407,7 @@ sudo systemctl enable wifi_provisioning.service
 sudo systemctl restart wifi_provisioning.service
 ```
 
-## Sefttest
+## Selftest
 
 Kiểm tra các chức năng hoạt động. Phải chạy với sudo để còn giành quyển điều khiển led ACT, audio
 
