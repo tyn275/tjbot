@@ -101,6 +101,56 @@ def connect_mqtt():
     client.connect(BROKER, PORT)
     return client
 
+def _parse_params(raw_params: str) -> list:
+    """
+    Bóc tách tham số từ chuỗi lệnh MQTT một cách robust.
+    Xử lý được 3 trường hợp:
+      1. Format chuẩn (MQTTX gõ tay):      TextToSpeak("text có, dấu phẩy", "vi")
+      2. Format web (double-wrap):  TextToSpeak(""text có, dấu phẩy"", "vi")
+      3. Fallback split thô (lưu ý có thể mất dấu phẩy trong text)
+    """
+    if not raw_params.strip():
+        return []
+
+    # --- THử 1: ast.literal_eval chuẩn ---
+    # Xử lý tốt nhất: giữ nguyên dấu phẩy bên trong chuỗi, loại bỏ ngoặc kép tự động
+    try:
+        return list(ast.literal_eval(f"[{raw_params}]"))
+    except Exception:
+        pass
+
+    # --- THử 2: Phát hiện và xử lý double-double-quote do web sinh ra ---
+    # Ví dụ web gửi: ""Xin chào, Tôi là Bot"", "vi", "Google"
+    # Người dùng gõ text có dấu phẩy, web tự động bọ thêm 1 lớp ngoặc kép
+    if raw_params.startswith('""'):
+        try:
+            # Regex tìm phần text giữa cặp ngoặc kép kép ""...""
+            # và phần còn lại (các tham số tiếp theo)
+            match = re.match(r'^""(.*?)""\s*(?:,\s*(.*))?$', raw_params, re.DOTALL)
+            if match:
+                inner = match.group(1)      # Nội dung trong "": 'Xin chào", "Tôi là Bot'
+                rest  = match.group(2) or '' # Các tham số phía sau: '"vi", "Google"'
+
+                # Nội dung bị web tách thành các mảnh bởi '", "', gộp lại bằng ', '
+                # Ví dụ: 'Xin chào", "Tôi là Bot' → 'Xin chào, Tôi là Bot'
+                text = re.sub(r'",\s*"', ', ', inner)
+
+                # Parse các tham số phía sau bình thường
+                try:
+                    rest_params = list(ast.literal_eval(f"[{rest}]")) if rest.strip() else []
+                except Exception:
+                    rest_params = [p.strip().strip('"').strip("'") for p in rest.split(',') if p.strip()]
+
+                print(f"-> [PARSE OK - double-wrap]: text='{text}', rest={rest_params}")
+                return [text] + rest_params
+        except Exception as e:
+            print(f"-> [PARSE double-wrap FAIL]: {e}")
+
+    # --- FALLBACK: split thô (giữ nguyên từ phiên bản cũ, dự phòng cuối cùng) ---
+    print("-> [PARSE FALLBACK]: Dùng split thô, có thể mất dấu phẩy trong text")
+    return [p.strip().strip('"').strip("'") for p in raw_params.split(",") if p.strip()]
+
+
 def on_message(client, userdata, msg):
     payload = msg.payload.decode().strip()
     
@@ -141,22 +191,9 @@ def on_message(client, userdata, msg):
 
     func_name = match.group(1)
     raw_params = match.group(2)
-    
-    params = []
-    if raw_params.strip():
-        try:
-            # Bọc chuỗi tham số vào cặp dấu ngoặc vuông [] để biến nó thành một chuỗi List hợp lệ
-            # Ví dụ: ' "2233, Ngân", "vi" ' => '["2233, Ngân", "vi"]'
-            list_str = f"[{raw_params}]"
-            
-            # ast.literal_eval sẽ tự bóc tách chuẩn xác, giữ nguyên dấu phẩy trong ngoặc kép
-            # và tự động loại bỏ các dấu ngoặc kép bọc ngoài chuỗi luôn!
-            params = ast.literal_eval(list_str)
-        except Exception as e:
-            # Dự phòng nếu chuỗi truyền vào quá dị hoặc sai cú pháp ngoặc kép
-            print(f"-> [LỖI PARSE THAM SỐ]: Không thể bóc tách bằng ast, chuyển về split thô. Chi tiết: {e}")
-            params = [p.strip().strip('"').strip("'") for p in raw_params.split(",")] if raw_params else []
-    # ----------------------------------
+
+    params = _parse_params(raw_params)
+
 
     # -----------------------------------------------------------------
     # 💡 ÁP DỤNG QUY TẮC PHÂN LUỒNG MỚI (ĐỒNG BỘ vs BẤT ĐỒNG BỘ)
