@@ -336,6 +336,15 @@
 
         // HÀM CHUYỂN PHÂN HỆ
         function switchSection(sectionId, element) {
+            // 🧹 Dọn dẹp tài nguyên phân hệ cũ trước khi chuyển (ngắt âm thanh, mic, camera, AI)
+            if (typeof window.cleanupCurrentAction === "function") {
+                try {
+                    window.cleanupCurrentAction();
+                } catch (e) {
+                    console.error("Lỗi khi dọn dẹp phân hệ:", e);
+                }
+            }
+
             document.querySelectorAll('.sidebar .nav-link').forEach(link => link.classList.remove('active'));
             element.classList.add('active');
 
@@ -370,12 +379,21 @@
                     container.innerHTML = '<div id="actionsConfigLoaded"></div>' + html;
                     writeLog("[UI] Đã nhúng cấu trúc kịch bản actionaskme.html thành công.");
 
-                    // Kích hoạt cơ chế Eval cô lập để thực thi mã Script bên trong block con
+                    // Kích hoạt thực thi mã Script bên trong block con một cách an toàn
                     const scripts = container.querySelectorAll('script');
                     scripts.forEach(oldScript => {
                         try {
-                            window.eval(oldScript.text);
-                        } catch (e) { console.error("Lỗi thực thi script kịch bản Actions:", e); }
+                            const newScript = document.createElement('script');
+                            Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                            newScript.text = oldScript.text;
+                            document.body.appendChild(newScript).parentNode.removeChild(newScript);
+                        } catch (e) {
+                            try {
+                                window.eval(oldScript.text);
+                            } catch (err) {
+                                console.error("Lỗi thực thi script kịch bản Actions:", err);
+                            }
+                        }
                     });
                 })
                 .catch(err => {
@@ -646,6 +664,10 @@
                 // 🔥 ĐIỀU KIỆN QUYẾT ĐỊNH: Bắn dữ liệu vào hàm toàn cục của khối Mic
                 if (typeof window.handleMqttSpeechToText === "function") {
                     window.handleMqttSpeechToText(payload);
+                }
+                // 🔥 Tích hợp phân hệ Gemini Chatbot: Đẩy kết quả giọng nói vào khung hội thoại AI
+                if (typeof window.handleActionAskMeS2T === "function") {
+                    window.handleActionAskMeS2T(payload);
                 }
             }
 

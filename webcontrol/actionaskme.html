@@ -1,0 +1,740 @@
+<div class="card p-4 shadow-sm border-0 bg-white h-100">
+  <!-- HEADER PHÂN HỆ -->
+  <div
+    class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2"
+  >
+    <div class="d-flex align-items-center">
+      <div
+        class="p-2 rounded me-3"
+        style="background-color: #e7f5ff; color: #1c7ed6"
+      >
+        <i class="fa-solid fa-robot fa-2x"></i>
+      </div>
+      <div>
+        <h5 class="fw-bold text-dark mb-0">GOOGLE GEMINI CHATBOT</h5>
+        <small class="text-muted">Trợ lý số tích hợp Mic, Loa và Camera</small>
+      </div>
+    </div>
+
+    <!-- Ô NHẬP GEMINI API KEY -->
+    <div class="d-flex align-items-center gap-1" style="min-width: 300px">
+      <i class="fa-solid fa-key text-muted me-1" style="font-size: 0.9rem"></i>
+      <span
+        class="small fw-semibold text-muted me-1 text-nowrap"
+        style="font-size: 0.78rem"
+        >Gemini Key:</span
+      >
+      <input
+        type="password"
+        id="txtGeminiApiKey"
+        class="form-control form-control-sm"
+        placeholder="AIzaSy..."
+        style="font-size: 0.8rem; font-family: monospace"
+        title="Dán API Key Gemini của bạn vào đây"
+      />
+      <button
+        class="btn btn-outline-secondary btn-sm text-nowrap px-2"
+        onclick="listGeminiModels()"
+        title="Kiểm tra model nào đang khả dụng với API Key này"
+        style="font-size: 0.72rem"
+      >
+        <i class="fa-solid fa-list-check"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- THANH CÔNG TẮC ĐIỀU KHIỂN (TOGGLE SWITCHES) -->
+  <div
+    class="bg-light p-2 px-3 rounded border d-flex flex-wrap align-items-center gap-4 mb-3"
+  >
+    <!-- 1. Toggle Đọc kết quả TTS -->
+    <div class="form-check form-switch mb-0">
+      <input
+        class="form-check-input"
+        type="checkbox"
+        id="togSpeechOutput"
+        checked
+        style="cursor: pointer"
+      />
+      <label
+        class="form-check-label small fw-semibold text-dark"
+        for="togSpeechOutput"
+        style="cursor: pointer; font-size: 0.8rem"
+      >
+        <i class="fa-solid fa-volume-high text-success me-1"></i> Đọc kết quả
+        (TTS)
+      </label>
+    </div>
+
+    <!-- 2. Toggle Nói bằng Mic S2T -->
+    <div class="form-check form-switch mb-0">
+      <input
+        class="form-check-input"
+        type="checkbox"
+        id="togMicInput"
+        style="cursor: pointer"
+      />
+      <label
+        class="form-check-label small fw-semibold text-dark"
+        for="togMicInput"
+        style="cursor: pointer; font-size: 0.8rem"
+      >
+        <i class="fa-solid fa-microphone text-primary me-1"></i> Nói bằng Mic
+        (S2T)
+      </label>
+    </div>
+
+    <!-- 3. Toggle Hiện Camera -->
+    <div class="form-check form-switch mb-0">
+      <input
+        class="form-check-input"
+        type="checkbox"
+        id="togCameraView"
+        style="cursor: pointer"
+      />
+      <label
+        class="form-check-label small fw-semibold text-dark"
+        for="togCameraView"
+        style="cursor: pointer; font-size: 0.8rem"
+      >
+        <i class="fa-solid fa-video text-danger me-1"></i> Hiện Camera
+      </label>
+    </div>
+  </div>
+
+  <!-- KHUNG XEM CAMERA (Ẩn mặc định, mở khi bật toggle Camera) -->
+  <div id="aiCameraContainer" class="d-none mb-3">
+    <div
+      class="p-2 bg-dark rounded border text-center position-relative"
+      style="max-height: 220px; background: #0b0f19"
+    >
+      <video
+        id="aiVideoPlayer"
+        class="w-100 rounded"
+        style="max-height: 200px; object-fit: contain; background: #000"
+        controls
+        autoplay
+        playsinline
+        muted
+      ></video>
+      <div
+        id="aiCameraBadge"
+        class="position-absolute top-0 end-0 m-2 badge bg-danger px-2 py-1 small"
+        style="font-size: 0.65rem"
+      >
+        CAMERA LIVE
+      </div>
+    </div>
+  </div>
+
+  <!-- KHUNG CHAT HỘI THOẠI (CHAT BOX) -->
+  <div
+    class="border rounded p-3 mb-3 bg-white d-flex flex-column"
+    id="aiChatBoxArea"
+    style="
+      min-height: 320px;
+      max-height: 380px;
+      overflow-y: auto;
+      background-color: #fafbfc;
+    "
+  >
+    <div
+      id="chatPlaceholder"
+      class="text-center text-muted my-auto py-5"
+      style="font-size: 0.88rem"
+    >
+      <i class="fa-regular fa-comments fa-2x mb-2 d-block opacity-50"></i>
+      Nhập tin nhắn chat bằng tay hoặc bật Mic để bắt đầu hội thoại...
+    </div>
+    <div id="chatMessagesList" class="d-flex flex-column gap-2"></div>
+  </div>
+
+  <!-- KHUNG NHẬP TIN NHẮN CHAT -->
+  <div class="input-group mb-2">
+    <input
+      type="text"
+      id="txtChatInput"
+      class="form-control"
+      placeholder="Nhập câu hỏi và nhấn Enter..."
+      style="font-size: 0.85rem"
+      autocomplete="off"
+    />
+    <button
+      class="btn btn-primary px-3"
+      id="btnSendChat"
+      type="button"
+      onclick="triggerSendChat()"
+    >
+      <i class="fa-solid fa-paper-plane"></i>
+    </button>
+  </div>
+
+  <!-- THANH TRẠNG THÁI CUỐI TRANG (STATUS BAR) -->
+  <div
+    class="d-flex justify-content-between align-items-center small text-muted px-1"
+    style="font-size: 0.72rem"
+  >
+    <span id="lblAIstatusBar">
+      <i class="fa-solid fa-circle-check text-success me-1"></i>
+      <span id="lblMicStatusText">Đã đóng thiết bị thu âm.</span>
+    </span>
+    <span id="lblCamStatusText">Đã ngắt Camera.</span>
+  </div>
+</div>
+
+<style>
+  /* Kiểu dáng bong bóng chat (Chat Bubbles) */
+  .chat-bubble-user {
+    background-color: #0d6efd;
+    color: #ffffff;
+    border-radius: 18px 18px 4px 18px;
+    padding: 8px 14px;
+    max-width: 80%;
+    font-size: 0.85rem;
+    word-break: break-word;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .chat-bubble-gemini {
+    background-color: #198754;
+    color: #ffffff;
+    border-radius: 18px 18px 18px 4px;
+    padding: 8px 14px;
+    max-width: 85%;
+    font-size: 0.85rem;
+    word-break: break-word;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .chat-bubble-demo {
+    background-color: #198754;
+    color: #ffffff;
+    border-radius: 18px 18px 18px 4px;
+    padding: 8px 14px;
+    max-width: 85%;
+    font-size: 0.85rem;
+    word-break: break-word;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+</style>
+
+<script>
+  // =========================================================================
+  // 🧠 LOGIC QUẢN LÝ GOOGLE GEMINI CHATBOT (REST API + MQTT PIPELINE)
+  // =========================================================================
+
+  // Biến quản lý tiến trình
+  window.geminiAbortController = null;
+  window.isGeminiThinking = false;
+
+  // Khôi phục danh sách model đã lưu từ localStorage
+  // Filter ra các thinking models (gemini-2.5, gemini-exp) để tránh chain-of-thought
+  (function restoreModelList() {
+    const BLOCKED = ["gemini-2.5", "gemini-exp", "gemini-embedding", "text-embedding", "aqa"];
+    try {
+      const saved = localStorage.getItem("gemini_usable_models");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Lọc lại lần nữa khi restore — phòng trường hợp list cũ có thinking models
+        const clean = parsed.filter((m) => !BLOCKED.some((b) => m.includes(b)));
+        if (clean.length > 0) {
+          window.listedGeminiModels = clean;
+          console.log("🔁 [GEMINI] Restored", clean.length, "models (filtered):", clean[0]);
+        } else {
+          // List cũ chỉ có thinking models → xóa cảch
+          localStorage.removeItem("gemini_usable_models");
+          console.warn("⚠️ [GEMINI] Cache cũ chỉ có thinking models, đã xóa. Bấm 🔍 để tải lại.");
+        }
+      }
+    } catch (e) { /* bỏ qua lỗi parse */ }
+  })();
+
+  // 1. Khởi tạo và ghi nhớ API Key từ localStorage
+  (function initApiKey() {
+    const keyInput = document.getElementById("txtGeminiApiKey");
+    const savedKey = localStorage.getItem("gemini_api_key") || "";
+    if (keyInput) {
+      keyInput.value = savedKey;
+      keyInput.addEventListener("input", function () {
+        localStorage.setItem("gemini_api_key", this.value.trim());
+      });
+      keyInput.addEventListener("change", function () {
+        localStorage.setItem("gemini_api_key", this.value.trim());
+      });
+    }
+  })();
+
+  // 2. Hàm thêm tin nhắn vào hộp chat
+  window.appendChatMessage = function (sender, text, isAI = false) {
+    const placeholder = document.getElementById("chatPlaceholder");
+    if (placeholder) placeholder.classList.add("d-none");
+
+    const list = document.getElementById("chatMessagesList");
+    if (!list) return;
+
+    const row = document.createElement("div");
+    row.className = isAI
+      ? "d-flex justify-content-start"
+      : "d-flex justify-content-end";
+
+    const bubble = document.createElement("div");
+    if (isAI) {
+      bubble.className = sender.includes("Demo")
+        ? "chat-bubble-demo"
+        : "chat-bubble-gemini";
+      bubble.innerHTML = `<strong>${sender}:</strong> ${text}`;
+    } else {
+      bubble.className = "chat-bubble-user";
+      bubble.innerHTML = `<strong>${sender}:</strong> ${text}`;
+    }
+
+    row.appendChild(bubble);
+    list.appendChild(row);
+
+    // Tự động cuộn xuống đáy hộp chat
+    const area = document.getElementById("aiChatBoxArea");
+    if (area) area.scrollTop = area.scrollHeight;
+  };
+
+  // 3. Hàm kích hoạt gửi tin nhắn từ ô nhập text
+  window.triggerSendChat = function () {
+    const input = document.getElementById("txtChatInput");
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = "";
+    window.appendChatMessage("Bạn", text, false);
+    window.askGoogleGeminiAI(text);
+  };
+
+  // Bắt phím Enter trong ô nhập chat
+  (function initChatInputKeypress() {
+    const input = document.getElementById("txtChatInput");
+    if (input) {
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          window.triggerSendChat();
+        }
+      });
+    }
+  })();
+
+  // 4. HÀM CHÍNH: GỌI GEMINI REST API & XỬ LÝ PHẢN HỒI
+  window.askGoogleGeminiAI = async function (promptText) {
+    const keyInput = document.getElementById("txtGeminiApiKey");
+    const apiKey = keyInput
+      ? keyInput.value.trim()
+      : localStorage.getItem("gemini_api_key") || "";
+    const statusBar = document.getElementById("lblAIstatusBar");
+
+    // Báo trạng thái AI đang suy nghĩ
+    if (statusBar) {
+      statusBar.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin text-warning me-1"></i> AI Bot đang suy nghĩ câu trả lời...';
+    }
+    window.isGeminiThinking = true;
+
+    // Nếu chưa có API Key -> Chạy chế độ Demo hướng dẫn
+    if (!apiKey) {
+      setTimeout(() => {
+        if (statusBar) {
+          statusBar.innerHTML =
+            '<i class="fa-solid fa-circle-check text-success me-1"></i> Sẵn sàng.';
+        }
+        window.appendChatMessage(
+          "Gemini (Demo)",
+          `Nhận được: "${promptText}". Vui lòng dán Gemini API Key để kích hoạt AI thật!`,
+          true,
+        );
+        window.isGeminiThinking = false;
+      }, 700);
+      return;
+    }
+
+    // Tạo AbortController để có thể hủy bỏ khi người dùng chuyển trang
+    window.geminiAbortController = new AbortController();
+
+    try {
+      // Cấu trúc đúng chuẩn Gemini API: systemInstruction là field riêng biệt
+      // KHÔNG nhúng vào user message để tránh model "lộ quá trình suy nghĩ"
+      const requestBody = {
+        systemInstruction: {
+          parts: [
+            {
+              text: "Bạn là trợ lý ảo tích hợp trên Robot TJBot. Hãy trả lời TRỰC TIẾP bằng 1-2 câu ngắn, tự nhiên, thân thiện, phù hợp phát âm thanh ra loa. Chỉ đưa ra câu trả lời, không giải thích, không liệt kê.",
+            },
+          ],
+        },
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: promptText }],
+          },
+        ],
+        generationConfig: {
+          maxOutputTokens: 200,
+          temperature: 0.7,
+          // thinkingConfig bên trong generationConfig (chỉ có hiệu lực với gemini-2.5 models)
+          // Với các model khác, field này bị bỏ qua
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      };
+
+      // Danh sách model mặc định (fallback tĩnh khi chưa chạy listGeminiModels)
+      const defaultModels = [
+        "models/gemini-2.0-flash",
+        "models/gemini-2.0-flash-lite",
+        "models/gemini-1.5-flash-latest",
+        "models/gemini-1.5-flash",
+      ];
+
+      // Nếu đã có danh sách động từ listGeminiModels → dùng nó thay cho list tĩnh
+      const activeModels =
+        window.listedGeminiModels && window.listedGeminiModels.length > 0
+          ? window.listedGeminiModels
+          : defaultModels;
+
+      // Build fallback endpoints: mỗi model thử cả v1beta lẫn v1
+      const fallbackEndpoints = [];
+      // Ưu tiên endpoint đã thành công trước (nếu có)
+      if (window.activeGeminiEndpoint) {
+        fallbackEndpoints.push(
+          window.activeGeminiEndpoint.replace("KEY_PLACEHOLDER", apiKey),
+        );
+      }
+      for (const modelName of activeModels) {
+        const m = modelName.replace("models/", "");
+        const urlV1beta = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
+        const urlV1 = `https://generativelanguage.googleapis.com/v1/models/${m}:generateContent?key=${apiKey}`;
+        if (!fallbackEndpoints.includes(urlV1beta))
+          fallbackEndpoints.push(urlV1beta);
+        if (!fallbackEndpoints.includes(urlV1)) fallbackEndpoints.push(urlV1);
+      }
+
+      // Kiểu chain-of-thought: dòng đầu bắt đầu bằng "* User", "* Context", "* Role:", "* Option"
+      const COT_PATTERN = /^\*\s*(User|Context|Role|Constraint|Option|Identity|Tone)/i;
+
+      // Biến theo dõi kết quả vòng lặp
+      let lastError = null;
+      let data = null;
+
+      for (const endpoint of fallbackEndpoints) {
+        try {
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
+            signal: window.geminiAbortController.signal,
+          });
+
+          if (response.ok) {
+            const candidate = await response.json();
+            const rawText = candidate.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+
+            // Phát hiện chain-of-thought → bỏ qua model này, thử model tiếp theo
+            if (COT_PATTERN.test(rawText)) {
+              const modelName = endpoint.match(/models\/([^:]+)/)?.[1] || endpoint;
+              console.warn(`⚠️ [GEMINI] ${modelName} trả về chain-of-thought, skip sang model tiếp theo.`);
+              lastError = new Error(`Model ${modelName} là thinking model, đã bỏ qua.`);
+              continue; // thử endpoint tiếp theo
+            }
+
+            data = candidate;
+            // Ghi nhớ endpoint thành công để lần sau gọi thẳng
+            const modelMatch = endpoint.match(/models\/([^:]+)/);
+            if (modelMatch) {
+              window.activeGeminiModelName = `models/${modelMatch[1]}`;
+              window.activeGeminiEndpoint = endpoint.replace(apiKey, "KEY_PLACEHOLDER");
+            }
+            console.log("✅ [GEMINI OK]: Gọi thành công qua:", endpoint.split("?")[0]);
+            break;
+          } else {
+            const errData = await response.json().catch(() => ({}));
+            lastError = new Error(errData.error?.message || `HTTP ${response.status}`);
+          }
+        } catch (fetchErr) {
+          if (fetchErr.name === "AbortError") throw fetchErr;
+          lastError = fetchErr;
+        }
+      }
+
+      if (!data) {
+        throw (
+          lastError ||
+          new Error("Không thể kết nối đến bất kỳ model Gemini nào.")
+        );
+      }
+
+      const aiResponse =
+        data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
+        "Xin lỗi, tôi chưa nghĩ ra câu trả lời.";
+
+      // Cập nhật trạng thái thành công
+      if (statusBar) {
+        statusBar.innerHTML =
+          '<i class="fa-solid fa-circle-check text-success me-1"></i> Đã trả lời.';
+      }
+      window.appendChatMessage("Gemini", aiResponse, true);
+
+      // Kiểm tra toggle đọc kết quả TTS
+      const togTTS = document.getElementById("togSpeechOutput");
+      if (togTTS && togTTS.checked) {
+        window.speakResponse(aiResponse);
+      }
+    } catch (error) {
+      if (error.name === "AbortError") {
+        console.log(
+          "[GEMINI]: Yêu cầu API đã được hủy chủ động do chuyển trang.",
+        );
+      } else {
+        console.error("[GEMINI ERROR]:", error);
+        if (statusBar) {
+          statusBar.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-danger me-1"></i> Lỗi: ${error.message}`;
+        }
+        window.appendChatMessage(
+          "Gemini (Lỗi)",
+          `Không thể kết nối AI: ${error.message}`,
+          true,
+        );
+      }
+    } finally {
+      window.isGeminiThinking = false;
+    }
+  };
+
+  // 5. Hàm liệt kê các model Gemini khả dụng với API Key hiện tại
+  window.listGeminiModels = async function () {
+    const keyInput = document.getElementById("txtGeminiApiKey");
+    const apiKey = keyInput ? keyInput.value.trim() : "";
+    const statusBar = document.getElementById("lblAIstatusBar");
+
+    if (!apiKey) {
+      alert("Vui lòng nhập API Key Gemini trước!");
+      return;
+    }
+
+    if (statusBar)
+      statusBar.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin text-warning me-1"></i> Đang truy vấn danh sách model...';
+
+    // Các model đã biết bị deprecated/bị chặn với new users → loại khỏi danh sách
+    const BLOCKED_PATTERNS = [
+      "gemini-2.5",
+      "gemini-exp",
+      "gemini-embedding",
+      "text-embedding",
+      "aqa",
+    ];
+
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+      );
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error?.message || `HTTP ${res.status}`);
+
+      // Lọc model hỗ trợ generateContent và không nằm trong danh sách bị chặn
+      const allSupported = (data.models || [])
+        .filter((m) =>
+          m.supportedGenerationMethods?.includes("generateContent"),
+        )
+        .map((m) => m.name);
+
+      const usable = allSupported.filter(
+        (name) => !BLOCKED_PATTERNS.some((p) => name.includes(p)),
+      );
+
+      console.log("📋 [ALL SUPPORTED]:", allSupported);
+      console.log("✅ [USABLE MODELS]:", usable);
+
+      if (statusBar)
+        statusBar.innerHTML =
+          '<i class="fa-solid fa-circle-check text-success me-1"></i> Sẵn sàng.';
+
+      const msg = usable.length
+        ? `✅ Model sẵn dùng (${usable.length}/${allSupported.length}):\n${usable.join("\n")}`
+        : `⚠️ Tổng ${allSupported.length} model nhưng tất cả đều bị lọc.\nDanh sách gốc:\n${allSupported.join("\n")}`;
+
+      alert(msg);
+
+      // Lưu danh sách vào bộ nhớ để askGoogleGeminiAI dùng làm dynamic fallback
+      if (usable.length > 0) {
+        window.listedGeminiModels = usable;
+        window.activeGeminiModelName = usable[0];
+        window.activeGeminiEndpoint = null; // sẽ được set sau lần gọi thành công đầu tiên
+        window.appendChatMessage(
+          "Hệ thống",
+          `✅ Đã nạp ${usable.length} model. Sẽ thử lần lượt bắt đầu từ: ${usable[0]}`,
+          true,
+        );
+      } else if (allSupported.length > 0) {
+        // Fallback: dùng toàn bộ kể cả model có thể deprecated
+        window.listedGeminiModels = allSupported;
+        window.activeGeminiModelName = allSupported[0];
+        window.activeGeminiEndpoint = null;
+        window.appendChatMessage(
+          "Hệ thống",
+          `⚠️ Dùng toàn bộ ${allSupported.length} model (bao gồm cả deprecated). Thử từ: ${allSupported[0]}`,
+          true,
+        );
+      }
+    } catch (err) {
+      console.error("[LIST MODELS ERROR]:", err);
+      if (statusBar)
+        statusBar.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-danger me-1"></i> Lỗi: ${err.message}`;
+      alert(`Lỗi truy vấn model: ${err.message}`);
+    }
+  };
+
+  // 6. Hàm bắn lệnh TextToSpeak xuống Robot qua MQTT
+  window.speakResponse = function (text) {
+    if (typeof sendMQTTCommand !== "function") {
+      console.warn("[TTS]: Hàm sendMQTTCommand chưa sẵn sàng.");
+      return;
+    }
+
+    // Làm sạch văn bản: bỏ xuống dòng, bỏ dấu nháy kép, bỏ các ký tự Markdown (**in đậm**)
+    const cleanText = text
+      .replace(/[*_#`~]/g, "")
+      .replace(/[\r\n]+/g, " ")
+      .replace(/"/g, "'")
+      .trim();
+
+    if (!cleanText) return;
+
+    // Bắn lệnh TTS chuẩn xuống Pi
+    const cmd = `TextToSpeak("${cleanText}", "vi", "vi-VN-Standard-A", "Google")`;
+    console.log("-> [AI PHÁT TIẾNG NÓI]:", cmd);
+    sendMQTTCommand(cmd);
+  };
+
+  // 6. Xử lý Toggle Nói bằng Mic (S2T)
+  (function initMicToggle() {
+    const tog = document.getElementById("togMicInput");
+    if (!tog) return;
+
+    tog.addEventListener("change", function () {
+      const micStatus = document.getElementById("lblMicStatusText");
+      if (this.checked) {
+        // Bật Mic thu âm 6 giây bằng tiếng Việt
+        const cmd = "Listen(on, 6, vi-VN)";
+        if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmd);
+        if (micStatus)
+          micStatus.innerHTML =
+            '<span class="text-primary fw-bold"><i class="fa-solid fa-microphone fa-beat me-1"></i> Đang lắng nghe bạn nói... (6s)</span>';
+      } else {
+        // Ngắt Mic
+        const cmd = "Listen(off)";
+        if (typeof sendMQTTCommand === "function") sendMQTTCommand(cmd);
+        if (micStatus) micStatus.innerText = "Đã đóng thiết bị thu âm.";
+      }
+    });
+  })();
+
+  // 7. Hàm toàn cục đón kết quả S2T từ Robot bắn về (Được gọi từ index.html)
+  window.handleActionAskMeS2T = function (payload) {
+    if (!payload || !payload.includes("s2t=")) return;
+
+    const textResult = payload.split("s2t=")[1]?.trim();
+    const micStatus = document.getElementById("lblMicStatusText");
+    const togMic = document.getElementById("togMicInput");
+
+    // Tắt toggle Mic sau khi nhận xong kết quả
+    if (togMic) togMic.checked = false;
+    if (micStatus) micStatus.innerText = "Đã nhận xong giọng nói.";
+
+    if (
+      textResult &&
+      textResult !== "[Không nghe rõ]" &&
+      textResult !== "[Lỗi kết nối AI]"
+    ) {
+      console.log("🎤 [S2T NHẬN ĐƯỢC]:", textResult);
+      window.appendChatMessage("Bạn", textResult, false);
+      // Tự động đẩy vào Não Gemini để suy nghĩ và trả lời!
+      window.askGoogleGeminiAI(textResult);
+    } else {
+      window.appendChatMessage(
+        "Hệ thống",
+        "Không nghe rõ câu hỏi. Vui lòng thử nói lại gần Mic hơn.",
+        true,
+      );
+    }
+  };
+
+  // 8. Xử lý Toggle Hiện Camera
+  (function initCameraToggle() {
+    const tog = document.getElementById("togCameraView");
+    const camBox = document.getElementById("aiCameraContainer");
+    const camStatus = document.getElementById("lblCamStatusText");
+    if (!tog) return;
+
+    tog.addEventListener("change", function () {
+      if (this.checked) {
+        if (camBox) camBox.classList.remove("d-none");
+        if (camStatus)
+          camStatus.innerHTML =
+            '<span class="text-danger fw-bold"><i class="fa-solid fa-circle text-danger me-1"></i> Camera đang bật.</span>';
+
+        // Gửi lệnh bật camera xuống Pi
+        if (typeof sendMQTTCommand === "function") {
+          sendMQTTCommand('Camera("on", "320x240")');
+        }
+      } else {
+        if (camBox) camBox.classList.add("d-none");
+        if (camStatus) camStatus.innerText = "Đã ngắt Camera.";
+
+        // Gửi lệnh ngắt camera
+        if (typeof sendMQTTCommand === "function") {
+          sendMQTTCommand('Camera("off")');
+        }
+      }
+    });
+  })();
+
+  // =========================================================================
+  // 🧹 HÀM LIFECYCLE CLEANUP HOOK: DỌN DẸP AN TOÀN KHI RỜI PHÂN HỆ
+  // =========================================================================
+  window.cleanupCurrentAction = function () {
+    console.log(
+      "🧹 [ACTIONASKME CLEANUP]: Đang dọn dẹp tài nguyên trước khi rời trang...",
+    );
+
+    // 1. Hủy request Gemini API đang treo nếu có
+    if (window.geminiAbortController) {
+      window.geminiAbortController.abort();
+      window.geminiAbortController = null;
+    }
+
+    // 2. Gạt tắt toggle Mic nếu đang mở
+    const togMic = document.getElementById("togMicInput");
+    if (togMic && togMic.checked) {
+      togMic.checked = false;
+      if (typeof sendMQTTCommand === "function") sendMQTTCommand("Listen(off)");
+    }
+
+    // 3. Gạt tắt toggle Camera nếu đang mở
+    const togCam = document.getElementById("togCameraView");
+    if (togCam && togCam.checked) {
+      togCam.checked = false;
+      const camBox = document.getElementById("aiCameraContainer");
+      if (camBox) camBox.classList.add("d-none");
+      if (typeof sendMQTTCommand === "function")
+        sendMQTTCommand('Camera("off")');
+    }
+
+    // 4. Gửi lệnh ngắt âm thanh khẩn cấp Silent() để ngắt loa nếu đang đọc dở
+    if (typeof sendMQTTCommand === "function") {
+      sendMQTTCommand("Silent()");
+    }
+
+    // 5. Cập nhật lại thanh trạng thái
+    const statusBar = document.getElementById("lblAIstatusBar");
+    if (statusBar) {
+      statusBar.innerHTML =
+        '<i class="fa-solid fa-circle-check text-success me-1"></i> Sẵn sàng.';
+    }
+  };
+</script>
